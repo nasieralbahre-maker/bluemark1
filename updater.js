@@ -346,11 +346,11 @@
       // (1) تطبيق سطح المكتب: تنزيل أصلي داخل التطبيق + تثبيت تلقائي
       nativeDownload(u, fn, nd);
     } else if (isMobile()) {
-      // (2) الجوال: تنزيل طبيعي إلى الجهاز عبر مدير التنزيلات + بروقس وهمي
+      // (2) الجوال: تنزيل طبيعي إلى مدير تنزيلات الجهاز + بروقس وهمي
       mobileDownload(u, fn);
     } else {
       // (3) كمبيوتر: تنزيل مباشر ببروقس حقيقي
-      browserDownload(u, fn);
+      browserDownload(u, fn, false);
     }
   }
 
@@ -377,83 +377,77 @@
     return false;
   }
 
-  // بدء تنزيل طبيعي يمرّ عبر مدير تنزيلات الجهاز (يظهر في قائمة التنزيلات)
-  // - نفس الأصل: خاصية download مدعومة في كل المتصفحات
-  // - أصل مختلف: خاصية download تُتجاهل → نستخدم التنقل في نفس التبويب
-  //   (هذا ما يفعّل مدير تنزيلات Android ويظهر الإشعار)
-  // - iOS: نفتح تبويباً جديداً لأن Safari يعرض واجهة التنزيل
-  function startDeviceDownload(url, filename) {
-    var sameOrigin = false;
-    try { sameOrigin = (new URL(url, location.href).origin === location.origin); } catch (e) { /* ignore */ }
-
-    if (sameOrigin) {
-      try {
-        var a = document.createElement('a');
-        a.href = url; a.download = filename; a.rel = 'noopener';
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); }, 2000);
-        return true;
-      } catch (e) { /* ignore */ }
-    }
-
-    if (isIOS()) {
-      // Safari: تبويب جديد + واجهة التنزيل/المشاركة
-      try { window.open(url, '_blank'); return true; } catch (e) { /* ignore */ }
-    } else {
-      // Android وغيره: تنقّل في نفس التبويب — المتصفح ينزّل الملف
-      // ويعرضه في مدير التنزيلات (قائمة الإشعارات) دون مغادرة الصفحة فعلياً
-      // لأن ردّ الخادم Content-Disposition: attachment لا يغيّر الصفحة
-      try { window.location.href = url; return true; } catch (e) { /* ignore */ }
-      // احتياطي: نافذة جديدة
-      try { window.open(url, '_blank'); return true; } catch (e2) { /* ignore */ }
-    }
+  // ---------- كشف iOS / Safari ----------
+  function isIOS() {
+    var ua = navigator.userAgent || '';
+    if (/iPad|iPhone|iPod/.test(ua)) return true;
+    // iPadOS 13+
+    if (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1) return true;
     return false;
   }
 
-  // ---------- (أ) الجوال: تنزيل طبيعي عبر مدير تنزيلات الجهاز + بروقس وهمي ----------
-  function mobileDownload(u, fn) {
-    // نُطلق التنزيل الطبيعي على الجهاز (يظهر في مدير التنزيلات / الإشعارات)
-    startDeviceDownload(u.url, fn);
-    fakeProgress(u, fn);
-  }
+  // ============================================================
+  //  تنزيل الملف في المتصفح (جوال + كمبيوتر)
+  //  ------------------------------------------------------------
+  //  4 طبقات متتالية لضمان وصول الملف لمدير تنزيلات الجهاز:
+  //   1) XHR ← Blob  ثم <a download>   ← الأفضل: يصل للإشعارات دائماً
+  //   2) لو ردّ السيرفر JSON → نستخرج رابط الملف الحقيقي ونعيد المحاولة
+  //   3) لو منع CORS  → <iframe> مخفي  (المتصفح يتكفّل بالملف)
+  //   4) احتياطي أخير → التنقل في نفس التبويب
+  //  البروقس: حقيقي على الكمبيوتر، وهمي على الجوال (حسب الطلب)
+  // ============================================================
 
-  // بروقس بار وهمي: حركة تصاعدية سلسة حتى 100% ثم رسالة النجاح
-  function fakeProgress(u, fn) {
-    var dur = 9000;                       // مدة الحركة التقديرية (9 ثوانٍ)
+  var _fakeTimer = null;
+
+  function startFakeBar() {
+    stopFakeBar();
+    var dur = 9000;
     var t0 = Date.now();
-    var timer = setInterval(function () {
+    _fakeTimer = setInterval(function () {
       var ratio = Math.min(1, (Date.now() - t0) / dur);
-      // تسارع ثم تباطؤ حتى لا يصل 100% قبل الأوان
       var eased = 1 - Math.pow(1 - ratio, 2.4);
       var pct = Math.min(99, Math.round(eased * 99));
       setProg(pct, 'جارٍ التنزيل على جهازك... ' + pct + '%');
       progFor(_busyId, pct);
-      if (ratio >= 1) {
-        clearInterval(timer);
-        setProg(100, '✅ تم إرسال النسخة إلى جهازك — ' + fn);
-        progFor(_busyId, 100);
-        markSeen(u.id);
-        _busyId = '';
-        renderList();
-        toast('✅ بدأ تنزيل ' + u.name);
-        activity('action', 'تنزيل تحديث (' + u.name + ')');
-        setTimeout(function () { showProg(false); }, 3500);
-      }
     }, 120);
   }
+  function stopFakeBar() { if (_fakeTimer) { clearInterval(_fakeTimer); _fakeTimer = null; } }
 
-  // ---------- (ب) المتصفح (جوال + كمبيوتر): تنزيل ببروقرس بار ----------
-  // ملاحظة: بعض siervers لا تسمح بالطلب المباشر (CORS) — في هذه الحالة
-  // نفتح رابط التحميل مباشرةً في تبويب جديد، والمتصفح يتكفّل بالتنزيل.
-  function isIOS() {
-    var ua = navigator.userAgent || '';
-    return /iPad|iPhone|iPod/.test(ua) ||
-           (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
+  // استخراج رابط الملف الحقيقي من رد JSON
+  function extractDownloadUrl(txt) {
+    var s2 = String(txt || '');
+    try {
+      var j = JSON.parse(s2);
+      var keys = ['url', 'link', 'download_url', 'downloadUrl', 'file_url', 'fileUrl',
+                  'file', 'href', 'direct', 'direct_url', 'source', 'src', 'data'];
+      for (var i = 0; i < keys.length; i++) {
+        var v = j[keys[i]];
+        if (typeof v === 'string' && /^https?:\/\//i.test(v)) return v;
+        if (v && typeof v === 'object') {
+          for (var k in v) {
+            if (typeof v[k] === 'string' && /^https?:\/\//i.test(v[k])) return v[k];
+          }
+        }
+      }
+      var m = s2.match(/https?:\\?\/\\?\/[^"'\\\s]+\.[a-z0-9]{2,6}/i);
+      if (m) return m[0].replace(/\\\//g, '/');
+    } catch (e) { /* ignore */ }
+    return '';
   }
 
-  function browserDownload(u, fn) {
+  function readBlobText(blob) {
+    return new Promise(function (res, rej) {
+      try {
+        var fr = new FileReader();
+        fr.onload = function () { res(String(fr.result || '')); };
+        fr.onerror = function () { rej(new Error('read')); };
+        fr.readAsText(blob);
+      } catch (e) { rej(e); }
+    });
+  }
+
+  // ---------- (1) XHR ← Blob ثم حفظ عبر <a download> ----------
+  function browserDownload(u, fn, fakeUI) {
     var xhr = new XMLHttpRequest();
     _xhr = xhr;
     var finished = false;
@@ -463,6 +457,7 @@
     xhr.timeout = 0;
 
     xhr.onprogress = function (e) {
+      if (fakeUI) return;                       // الجوال: بروقس وهمي فقط
       var got = e.loaded || 0;
       if (e.lengthComputable && e.total) {
         var pct = (got / e.total) * 100;
@@ -480,52 +475,88 @@
       var status = xhr.status || 0;
       var blob = xhr.response;
       if (status < 200 || status >= 300 || !blob || !blob.size) {
-        // رد غير صالح: ننتقل لفتح الرابط مباشرة
-        openDirect(u, fn);
+        fallbackUpload(u, fn, fakeUI);
+        return;
+      }
+      // (2) لو ردّ السيرفر JSON بدل الملف: نستخرج الرابط الحقيقي
+      var ct = (blob.type || '').toLowerCase();
+      if (ct.indexOf('json') >= 0 || ct.indexOf('html') >= 0) {
+        readBlobText(blob).then(function (txt) {
+          var real = extractDownloadUrl(txt);
+          if (real && real !== u.url) {
+            browserDownload(Object.assign({}, u, { url: real }), fn, fakeUI);
+          } else {
+            fallbackUpload(u, fn, fakeUI);
+          }
+        }).catch(function () { fallbackUpload(u, fn, fakeUI); });
         return;
       }
       _xhr = null;
-      var url2 = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url2; a.download = fn; a.rel = 'noopener';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function () {
-        try { URL.revokeObjectURL(url2); } catch (e) {}
-        if (a.parentNode) a.parentNode.removeChild(a);
-      }, 20000);
-
-      // على iOS: نفتح الملف في تبويب جديد ليبدأ التنزيل فعلياً
-      if (isIOS()) {
-        try { window.open(url2, '_blank'); } catch (e) { /* ignore */ }
-      }
-
-      setProg(100, '✅ اكتمل التنزيل — ' + fn + ' (' + fmtSize(blob.size) + ')');
-      progFor(_busyId, 100);
-      markSeen(u.id);
-      _busyId = '';
-      renderList();
-      toast('✅ تم تنزيل ' + u.name);
-      activity('action', 'تنزيل تحديث (' + u.name + ')');
-      setTimeout(function () { showProg(false); }, 3500);
+      saveBlob(blob, fn, u, fakeUI);
     };
 
-    xhr.onerror = function () { if (!finished) openDirect(u, fn); };
-    xhr.ontimeout = function () { if (!finished) openDirect(u, fn); };
-    try { xhr.send(); } catch (e) { if (!finished) openDirect(u, fn); }
+    xhr.onerror = function () { if (!finished) fallbackUpload(u, fn, fakeUI); };
+    xhr.ontimeout = function () { if (!finished) fallbackUpload(u, fn, fakeUI); };
+    try { xhr.send(); } catch (e) { if (!finished) fallbackUpload(u, fn, fakeUI); }
   }
 
-  // فتح رابط التحميل مباشرة — يعمل على كل الأجهزة (الجوال والكمبيوتر)
-  function openDirect(u, fn) {
+  // ---------- حفظ Blob: يصل مدير تنزيلات الجهاز (الإشعارات) ----------
+  function saveBlob(blob, fn, u, fakeUI) {
+    stopFakeBar();
+    var url2 = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url2;
+    a.download = fn;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      try { URL.revokeObjectURL(url2); } catch (e) { /* ignore */ }
+      if (a.parentNode) a.parentNode.removeChild(a);
+    }, 20000);
+    // على iOS: نافذة جديدة أيضاً (Safari يتطلّبها)
+    if (isIOS()) { try { window.open(url2, '_blank'); } catch (e) { /* ignore */ } }
+
+    markSeen(u.id);
+    _busyId = '';
+    renderList();
+    setProg(100, '✅ تم التنزيل إلى جهازك — ' + fn + ' (' + fmtSize(blob.size) + ')');
+    progFor(u.id, 100);
+    toast('✅ تم تنزيل ' + u.name);
+    activity('action', 'تنزيل تحديث (' + u.name + ')');
+    setTimeout(function () { showProg(false); }, 3500);
+  }
+
+  // ---------- (3) CORS: <iframe> مخفي — المتصفح يتكفّل بالملف ----------
+  function fallbackUpload(u, fn, fakeUI) {
     _xhr = null;
-    setProg(0, '📥 جارٍ فتح رابط التنزيل على جهازك...');
-    startDeviceDownload(u.url, fn);
+    setProg(0, '📥 جارٍ تسليم الملف لمدير التنزيلات...');
+    var done = false;
+    try {
+      var fr = document.createElement('iframe');
+      fr.style.position = 'fixed';
+      fr.style.width = '1px'; fr.style.height = '1px';
+      fr.style.opacity = '0'; fr.style.border = '0';
+      fr.src = u.url;
+      document.body.appendChild(fr);
+      setTimeout(function () { if (fr.parentNode) fr.parentNode.removeChild(fr); }, 30000);
+      done = true;
+    } catch (e) { /* ignore */ }
+    // (4) احتياطي: التنقل في نفس التبويب
+    if (!done) { try { window.location.href = u.url; } catch (e2) { /* ignore */ } }
+
     markSeen(u.id);
     _busyId = '';
     renderList();
     toast('📥 جارٍ تنزيل ' + u.name);
-    setTimeout(function () { showProg(false); }, 4000);
+    setTimeout(function () { stopFakeBar(); showProg(false); }, 5000);
+  }
+
+  // ---------- (أ) الجوال: تنزيل طبيعي + بروقس وهمي ----------
+  function mobileDownload(u, fn) {
+    startFakeBar();
+    browserDownload(u, fn, true);
   }
 
   function failDownload(msg) {
@@ -593,6 +624,7 @@
     var nd = native();
     if (nd && _busyId) { try { nd.cancel(); } catch (e) { /* ignore */ } }
     if (_xhr) { try { _xhr.abort(); } catch (e) { /* ignore */ } _xhr = null; }
+    stopFakeBar();
     _busyId = '';
     _target = null;
     toast('✕ تم إلغاء التنزيل');
