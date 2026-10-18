@@ -3,7 +3,7 @@
 // الاستراتيجية: network-first للطلبات المحلية (تفضيل أحدث نسخة عند الاتصال،
 // والرجوع إلى النسخة المخزّنة عند انقطاع الشبكة).
 
-var CACHE = 'sweets-pwa-v1';
+var CACHE = 'sweets-pwa-v2';
 var APP_SHELL = [
   './',
   './index.html',

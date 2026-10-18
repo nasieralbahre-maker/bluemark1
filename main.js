@@ -125,33 +125,45 @@ function uniquePath(dir, name) {
   return p;
 }
 
-// تشغيل ملف التثبيت تلقائياً — بعد إغلاق التطبيق حتى لا تُقفل الملفات الجارية
+// تشغيل ملف التثبيت تلقائياً ثم إغلاق التطبيق
+// ترتيب مهم: نشغّل المثبّت أولاً (منفصلاً عن العملية)، ثم نغلق التطبيق
+// مع تأخير قصير — لأن app.quit() ينهي العملية ولا يُكمل بعدها شيء.
 async function runInstaller(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   sendAll('upd:stage', { stage: 'installing', file: path.basename(filePath) });
 
-  // نغلق التطبيق أولاً، وإلا فشل المثبّت في الكتابة فوق مجلده
-  try { app.quit(); } catch (e) { /* ignore */ }
-  await new Promise(function (r) { setTimeout(r, 800); });
+  // مهلة قصيرة حتى تظهر رسالة «جارٍ التثبيت» للمستخدم قبل الإغلاق
+  await new Promise(function (r) { setTimeout(r, 700); });
 
+  let launched = false;
   try {
     if (INSTALL_EXT.indexOf(ext) >= 0) {
-      // ملف تثبيت مباشر: نشغّله (صامت لامتدادات التثبيت المعروفة)
+      // ملف تثبيت مباشر: نشغّله منفصلاً عن هذه العملية
       const args = (SILENT_EXT.indexOf(ext) >= 0) ? ['/SILENT'] : [];
-      if (args.length) {
-        require('child_process').spawn(filePath, args, { detached: true, stdio: 'ignore' }).unref();
-      } else {
-        const err = await shell.openPath(filePath);
-        if (err) throw new Error(err);
-      }
+      const child = require('child_process').spawn(filePath, args, {
+        detached: true, stdio: 'ignore', windowsHide: false
+      });
+      child.on('error', function () { launched = false; });
+      child.unref();
+      launched = true;
     } else {
       // حاوية مضغوطة: نفتحها ليختار المستخدم الملف بدلنا
       shell.openPath(filePath);
+      launched = true;
     }
   } catch (e) {
-    // فشل التشغيل: نفتح مجلد التنزيلات يدوياً
-    try { shell.openPath(app.getPath('downloads')); } catch (e2) { /* ignore */ }
+    launched = false;
   }
+
+  if (!launched) {
+    // فشل التشغيل: نفتح مجلد التنزيلات ليختار المستخدم الملف بنفسه
+    try { shell.openPath(app.getPath('downloads')); } catch (e2) { /* ignore */ }
+    return;
+  }
+
+  // نغلق التطبيق بعد إقلاع المثبّت حتى لا تُقفل ملفاتُنا ملفاتَالتثبيت
+  await new Promise(function (r) { setTimeout(r, 1200); });
+  try { app.exit(0); } catch (e) { try { app.quit(); } catch (e2) {} }
 }
 
 // ربط كل التنزيلات المؤتمتة داخل التطبيق

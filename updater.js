@@ -120,6 +120,7 @@
   var _unsub = null;               // اشتراك التغييرات اللحظية
   var _tab = 'user';               // التبويب الحالي
   var _busyId = '';                // معرّف التنزيل الجاري
+  var _xhr = null;                 // طلب XHR الجاري (وضع المتصفح — للإلغاء)
   var _target = null;              // التحديث الجاري تنزيله
   var _seen = {};                  // ما شاهده المستخدم محلياً: id => true
 
@@ -219,13 +220,13 @@
     renderAdminTab();
     renderList();
     setStatus('');
-    // تذكير بوضع التشغيل: داخل التطبيق أم المتصفح
+    // تذكير بوضع التشغيل: تثبيت تلقائي (سطح المكتب) أو تنزيل مباشر (المتصفح)
     var h = el('upgradeUserHint');
     if (h) {
       h.textContent = native()
         ? 'النسخة الجديدة المتاحة — اضغط على المستطيل للتنزيل داخل التطبيق ثم التثبيت تلقائياً'
-        : 'النسخة الجديدة المتاحة — التنزيل والتثبيت يعملان داخل تطبيق سطح المكتب فقط';
-      h.style.color = native() ? '#64748b' : '#b45309';
+        : 'النسخة الجديدة المتاحة — اضغط على المستطيل للتنزيل مباشرة مع شريط تقدّم';
+      h.style.color = '#64748b';
     }
     m.classList.add('show');
   }
@@ -316,9 +317,9 @@
   }
 
   // ============================================================
-  //  التنزيل: داخل تطبيق سطح المكتب فقط (Electron)
-  //  لا ننزّل في المتصفح إطلاقاً — لأن المتصفح لا يستطيع
-  //  تشغيل ملف مُثبِّت تلقائياً (قيود أمنية).
+  //  التنزيل — يعمل في الوضعين مع شريط تقدّم:
+  //   (أ) تطبيق سطح المكتب: تنزيل أصلي داخل التطبيق + تثبيت تلقائي
+  //   (ب) المتصفح: تنزيل مباشر ببروقرس بار ثم فتح الملف تلقائياً
   // ============================================================
   function native() {
     return (window.BMS_DOWNLOADER && window.BMS_DOWNLOADER.isDesktop) ? window.BMS_DOWNLOADER : null;
@@ -329,24 +330,10 @@
     var u = list().filter(function (x) { return String(x.id) === String(id); })[0];
     if (!u) { toast('⛔ التحديث غير موجود'); return; }
 
-    // ---- المتصفح: ممنوع — نعرض رسالة واضحة فقط ----
-    var nd = native();
-    if (!nd) {
-      setProg(0, '');
-      showProg(true);
-      var nm = el('upgradeProgName'); if (nm) nm.textContent = u.name;
-      setProg(0, '⛔ التنزيل والتثبيت يعملان داخل تطبيق سطح المكتب (BMS SY) فقط — استخدم نسخة سطح المكتب');
-      var cc = el('upgradeCancel');
-      if (cc) { cc.textContent = '✕ إغلاق'; cc.style.display = ''; }
-      toast('⛔ هذه الميزة تعمل داخل تطبيق سطح المكتب فقط');
-      return;
-    }
-
-    // ---- سطح المكتب: تنزيل أصلي + شريط تقدّم + تثبيت تلقائي ----
     var fn = fileNameOf(u.url, u.name);
     var nmEl = el('upgradeProgName'); if (nmEl) nmEl.textContent = u.name + ' — ' + fn;
-    var cc2 = el('upgradeCancel');
-    if (cc2) { cc2.textContent = '✕ إلغاء التنزيل'; cc2.style.display = ''; }
+    var cc = el('upgradeCancel');
+    if (cc) { cc.textContent = '✕ إلغاء التنزيل'; cc.style.display = ''; }
 
     _busyId = u.id;
     _target = u;
@@ -354,6 +341,21 @@
     setProg(0, 'جارٍ الاتصال بالسيرفر...');
     document.querySelectorAll('.upg-item').forEach(function (n) { n.classList.remove('done'); });
 
+    var nd = native();
+    if (nd) {
+      // (1) تطبيق سطح المكتب: تنزيل أصلي داخل التطبيق + تثبيت تلقائي
+      nativeDownload(u, fn, nd);
+    } else if (isMobile()) {
+      // (2) الجوال: تنزيل طبيعي إلى الجهاز عبر مدير التنزيلات + بروقس وهمي
+      mobileDownload(u, fn);
+    } else {
+      // (3) كمبيوتر: تنزيل مباشر ببروقس حقيقي
+      browserDownload(u, fn);
+    }
+  }
+
+  // ---------- (أ) سطح المكتب: تنزيل أصلي + تثبيت تلقائي ----------
+  function nativeDownload(u, fn, nd) {
     Promise.resolve(nd.start(u.url, fn)).then(function (res) {
       if (!res || !res.ok) {
         _busyId = '';
@@ -366,11 +368,176 @@
     });
   }
 
-  // استقبال أحداث العملية الأصلية (تنزيل / اكتمال / تثبيت / خطأ)
+  // ---------- كشف الجوال ----------
+  function isMobile() {
+    var ua = navigator.userAgent || '';
+    if (/Android|iPhone|iPad|iPod|Mobile|Silk|BlackBerry|Opera Mini|IEMobile/i.test(ua)) return true;
+    // iPadOS 13+ يعرض نفسه كـ Mac
+    if (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1) return true;
+    return false;
+  }
+
+  // ---------- (أ) الجوال: تنزيل طبيعي عبر مدير تنزيلات الجهاز + بروقس وهمي ----------
+  function mobileDownload(u, fn) {
+    // نُطلق التنزيل الطبيعي: المتصفح على الجوال ينزّل الملف إلى الجهاز
+    var started = false;
+    try {
+      var a = document.createElement('a');
+      a.href = u.url;
+      a.download = fn;
+      a.rel = 'noopener';
+      a.target = '_blank';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); }, 2000);
+      started = true;
+    } catch (e) { /* ignore */ }
+    // على iOS نافتح نافذة جديدة أيضاً لضمان بدء التنزيل
+    if (isIOS()) { try { window.open(u.url, '_blank'); } catch (e) { /* ignore */ } }
+    if (!started) { try { window.open(u.url, '_blank'); } catch (e2) { /* ignore */ } }
+
+    fakeProgress(u, fn);
+  }
+
+  // بروقس بار وهمي: حركة تصاعدية سلسة حتى 100% ثم رسالة النجاح
+  function fakeProgress(u, fn) {
+    var dur = 9000;                       // مدة الحركة التقديرية (9 ثوانٍ)
+    var t0 = Date.now();
+    var timer = setInterval(function () {
+      var ratio = Math.min(1, (Date.now() - t0) / dur);
+      // تسارع ثم تباطؤ حتى لا يصل 100% قبل الأوان
+      var eased = 1 - Math.pow(1 - ratio, 2.4);
+      var pct = Math.min(99, Math.round(eased * 99));
+      setProg(pct, 'جارٍ التنزيل على جهازك... ' + pct + '%');
+      progFor(_busyId, pct);
+      if (ratio >= 1) {
+        clearInterval(timer);
+        setProg(100, '✅ تم إرسال النسخة إلى جهازك — ' + fn);
+        progFor(_busyId, 100);
+        markSeen(u.id);
+        _busyId = '';
+        renderList();
+        toast('✅ بدأ تنزيل ' + u.name);
+        activity('action', 'تنزيل تحديث (' + u.name + ')');
+        setTimeout(function () { showProg(false); }, 3500);
+      }
+    }, 120);
+  }
+
+  // ---------- (ب) المتصفح (جوال + كمبيوتر): تنزيل ببروقرس بار ----------
+  // ملاحظة: بعض siervers لا تسمح بالطلب المباشر (CORS) — في هذه الحالة
+  // نفتح رابط التحميل مباشرةً في تبويب جديد، والمتصفح يتكفّل بالتنزيل.
+  function isIOS() {
+    var ua = navigator.userAgent || '';
+    return /iPad|iPhone|iPod/.test(ua) ||
+           (navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1);
+  }
+
+  function browserDownload(u, fn) {
+    var xhr = new XMLHttpRequest();
+    _xhr = xhr;
+    var finished = false;
+
+    xhr.open('GET', u.url, true);
+    xhr.responseType = 'blob';
+    xhr.timeout = 0;
+
+    xhr.onprogress = function (e) {
+      var got = e.loaded || 0;
+      if (e.lengthComputable && e.total) {
+        var pct = (got / e.total) * 100;
+        setProg(pct, fmtSize(got) + ' من ' + fmtSize(e.total));
+        progFor(_busyId, pct);
+      } else {
+        var approx = Math.min(92, 6 + (got / (1024 * 1024)) * 10);
+        setProg(approx, 'جارٍ التنزيل... (' + fmtSize(got) + ')');
+        progFor(_busyId, approx);
+      }
+    };
+
+    xhr.onload = function () {
+      finished = true;
+      var status = xhr.status || 0;
+      var blob = xhr.response;
+      if (status < 200 || status >= 300 || !blob || !blob.size) {
+        // رد غير صالح: ننتقل لفتح الرابط مباشرة
+        openDirect(u, fn);
+        return;
+      }
+      _xhr = null;
+      var url2 = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url2; a.download = fn; a.rel = 'noopener';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () {
+        try { URL.revokeObjectURL(url2); } catch (e) {}
+        if (a.parentNode) a.parentNode.removeChild(a);
+      }, 20000);
+
+      // على iOS: نفتح الملف في تبويب جديد ليبدأ التنزيل فعلياً
+      if (isIOS()) {
+        try { window.open(url2, '_blank'); } catch (e) { /* ignore */ }
+      }
+
+      setProg(100, '✅ اكتمل التنزيل — ' + fn + ' (' + fmtSize(blob.size) + ')');
+      progFor(_busyId, 100);
+      markSeen(u.id);
+      _busyId = '';
+      renderList();
+      toast('✅ تم تنزيل ' + u.name);
+      activity('action', 'تنزيل تحديث (' + u.name + ')');
+      setTimeout(function () { showProg(false); }, 3500);
+    };
+
+    xhr.onerror = function () { if (!finished) openDirect(u, fn); };
+    xhr.ontimeout = function () { if (!finished) openDirect(u, fn); };
+    try { xhr.send(); } catch (e) { if (!finished) openDirect(u, fn); }
+  }
+
+  // فتح رابط التحميل مباشرة — يعمل على كل الأجهزة (الجوال والكمبيوتر)
+  function openDirect(u, fn) {
+    _xhr = null;
+    setProg(0, '📥 جارٍ فتح رابط التحزيل على جهازك...');
+    var opened = false;
+    try {
+      var a = document.createElement('a');
+      a.href = u.url;
+      a.download = fn;
+      a.rel = 'noopener';
+      a.target = '_blank';
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); }, 2000);
+      opened = true;
+    } catch (e) { /* ignore */ }
+    if (!opened) { try { window.open(u.url, '_blank'); } catch (e2) { /* ignore */ } }
+
+    markSeen(u.id);
+    _busyId = '';
+    renderList();
+    toast('📥 جارٍ تنزيل ' + u.name);
+    setTimeout(function () { showProg(false); }, 4000);
+  }
+
+  function failDownload(msg) {
+    _xhr = null;
+    _busyId = '';
+    setProg(0, '⛔ ' + msg);
+    toast('⛔ ' + msg);
+    setTimeout(function () { showProg(false); }, 4000);
+  }
+
+  // استقبال أحداث العملية الأصلية (تنزيل / اكتمل / تثبيت / خطأ)
+  // ملاحظة: كائن BMS_DOWNLOADER مُجمَّد بواسطة contextBridge — لا نضيف له خصائص
+  var _nativeBound = false;
   function bindNative() {
     var nd = native();
-    if (!nd || nd.__bound) return;
-    nd.__bound = true;
+    if (!nd || _nativeBound) return;
+    _nativeBound = true;
 
     nd.onProgress(function (d) {
       if (!_busyId) return;
@@ -420,6 +587,7 @@
   function cancelDownload() {
     var nd = native();
     if (nd && _busyId) { try { nd.cancel(); } catch (e) { /* ignore */ } }
+    if (_xhr) { try { _xhr.abort(); } catch (e) { /* ignore */ } _xhr = null; }
     _busyId = '';
     _target = null;
     toast('✕ تم إلغاء التنزيل');
