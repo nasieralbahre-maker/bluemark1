@@ -377,26 +377,45 @@
     return false;
   }
 
+  // بدء تنزيل طبيعي يمرّ عبر مدير تنزيلات الجهاز (يظهر في قائمة التنزيلات)
+  // - نفس الأصل: خاصية download مدعومة في كل المتصفحات
+  // - أصل مختلف: خاصية download تُتجاهل → نستخدم التنقل في نفس التبويب
+  //   (هذا ما يفعّل مدير تنزيلات Android ويظهر الإشعار)
+  // - iOS: نفتح تبويباً جديداً لأن Safari يعرض واجهة التنزيل
+  function startDeviceDownload(url, filename) {
+    var sameOrigin = false;
+    try { sameOrigin = (new URL(url, location.href).origin === location.origin); } catch (e) { /* ignore */ }
+
+    if (sameOrigin) {
+      try {
+        var a = document.createElement('a');
+        a.href = url; a.download = filename; a.rel = 'noopener';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); }, 2000);
+        return true;
+      } catch (e) { /* ignore */ }
+    }
+
+    if (isIOS()) {
+      // Safari: تبويب جديد + واجهة التنزيل/المشاركة
+      try { window.open(url, '_blank'); return true; } catch (e) { /* ignore */ }
+    } else {
+      // Android وغيره: تنقّل في نفس التبويب — المتصفح ينزّل الملف
+      // ويعرضه في مدير التنزيلات (قائمة الإشعارات) دون مغادرة الصفحة فعلياً
+      // لأن ردّ الخادم Content-Disposition: attachment لا يغيّر الصفحة
+      try { window.location.href = url; return true; } catch (e) { /* ignore */ }
+      // احتياطي: نافذة جديدة
+      try { window.open(url, '_blank'); return true; } catch (e2) { /* ignore */ }
+    }
+    return false;
+  }
+
   // ---------- (أ) الجوال: تنزيل طبيعي عبر مدير تنزيلات الجهاز + بروقس وهمي ----------
   function mobileDownload(u, fn) {
-    // نُطلق التنزيل الطبيعي: المتصفح على الجوال ينزّل الملف إلى الجهاز
-    var started = false;
-    try {
-      var a = document.createElement('a');
-      a.href = u.url;
-      a.download = fn;
-      a.rel = 'noopener';
-      a.target = '_blank';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); }, 2000);
-      started = true;
-    } catch (e) { /* ignore */ }
-    // على iOS نافتح نافذة جديدة أيضاً لضمان بدء التنزيل
-    if (isIOS()) { try { window.open(u.url, '_blank'); } catch (e) { /* ignore */ } }
-    if (!started) { try { window.open(u.url, '_blank'); } catch (e2) { /* ignore */ } }
-
+    // نُطلق التنزيل الطبيعي على الجهاز (يظهر في مدير التنزيلات / الإشعارات)
+    startDeviceDownload(u.url, fn);
     fakeProgress(u, fn);
   }
 
@@ -500,22 +519,8 @@
   // فتح رابط التحميل مباشرة — يعمل على كل الأجهزة (الجوال والكمبيوتر)
   function openDirect(u, fn) {
     _xhr = null;
-    setProg(0, '📥 جارٍ فتح رابط التحزيل على جهازك...');
-    var opened = false;
-    try {
-      var a = document.createElement('a');
-      a.href = u.url;
-      a.download = fn;
-      a.rel = 'noopener';
-      a.target = '_blank';
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); }, 2000);
-      opened = true;
-    } catch (e) { /* ignore */ }
-    if (!opened) { try { window.open(u.url, '_blank'); } catch (e2) { /* ignore */ } }
-
+    setProg(0, '📥 جارٍ فتح رابط التنزيل على جهازك...');
+    startDeviceDownload(u.url, fn);
     markSeen(u.id);
     _busyId = '';
     renderList();
