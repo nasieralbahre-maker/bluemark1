@@ -1,0 +1,445 @@
+:root{
+  --primary:#2563eb;--primary-dark:#1d4ed8;--primary-light:#eff6ff;
+  --dark:#0f172a;--muted:#64748b;--line:#e2e8f0;--bg:#f1f5f9;--card:#ffffff;
+  --ok:#16a34a;--danger:#dc2626;
+  --shadow:0 8px 30px rgba(15,23,42,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+/* قفل التمرير الأفقي فقط مع الإبقاء على التمرير العمودي طبيعيًا.
+   ملاحظة: لا نضع height:100% على html لأن دمجها مع overflow-x:hidden
+   كان يحوّل html إلى حاوية تمرير بارتفاع الشاشة ويمنع النزول للأسفل. */
+html{overflow-x:hidden;overscroll-behavior-x:none}
+body{min-height:100%;width:100%;overflow-x:hidden;overscroll-behavior-x:none}
+body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--dark);line-height:1.5;position:relative}
+a{text-decoration:none;color:inherit}
+button{font-family:inherit}
+
+/* ===== Shared buttons ===== */
+.btn{display:inline-block;border:none;border-radius:12px;padding:13px 26px;font-weight:700;font-size:16px;cursor:pointer;transition:.2s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-dark)}
+.btn-block{width:100%}
+
+/* ===== POS Header ===== */
+.pos-header{background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 22px;gap:16px}
+.pos-header .brand{display:flex;align-items:center;gap:12px}
+.pos-header .logo{font-size:30px}
+.pos-header h1{font-size:20px;font-weight:800}
+.pos-header small{font-size:12px;opacity:.85;display:block}
+.pos-header .head-right{display:flex;align-items:center;gap:18px}
+.pos-clock{font-size:14px;font-weight:600;text-align:left;opacity:.95}
+.admin-link{background:rgba(255,255,255,.15);color:#fff;padding:8px 15px;border-radius:10px;font-weight:600;font-size:14px;transition:.2s}
+.admin-link:hover{background:rgba(255,255,255,.28)}
+.report-link{background:rgba(255,255,255,.15);color:#fff;padding:8px 15px;border-radius:10px;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit;transition:.2s}
+.report-link:hover{background:rgba(255,255,255,.28)}
+.report-link.pos-update-link{background:rgba(52,199,89,.28)}
+.report-link.pos-update-link:hover{background:rgba(52,199,89,.45)}
+
+/* ===== POS Layout ===== */
+.pos{display:grid;grid-template-columns:1fr 390px;gap:0;height:calc(100vh - 58px)}
+.pos-catalog{padding:18px 22px;overflow-y:auto}
+.pos-cats{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:18px;position:sticky;top:0;background:var(--bg);padding-bottom:6px;z-index:5}
+.cat-chip{background:#fff;border:1px solid var(--line);color:var(--muted);padding:9px 18px;border-radius:30px;font-weight:600;cursor:pointer;transition:.2s}
+.cat-chip:hover{border-color:var(--primary);color:var(--primary)}
+.cat-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+
+.pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.pos-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;cursor:pointer;transition:.15s;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;user-select:none}
+.pos-card:hover{border-color:var(--primary);transform:translateY(-3px);box-shadow:var(--shadow)}
+.pos-card:active{transform:scale(.97)}
+.pos-card .pc-emoji{font-size:40px}
+.pos-card .pc-name{font-weight:700;font-size:15px}
+.pos-card .pc-price{color:var(--primary);font-weight:800;font-size:15px}
+.pos-empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px}
+
+/* ===== Ticket panel ===== */
+.pos-ticket{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;height:calc(100vh - 58px)}
+.ticket-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
+.ticket-head h2{font-size:19px}
+.ticket-new{background:var(--primary-light);color:var(--primary);border:none;padding:8px 14px;border-radius:10px;font-weight:700;cursor:pointer;transition:.2s}
+.ticket-new:hover{background:#dbeafe}
+
+.ticket-cust{display:flex;flex-direction:column;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.ticket-cust .type-row{display:flex;gap:8px}
+.type-btn{flex:1;border:1px solid var(--line);background:#fff;padding:8px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;transition:.2s;color:var(--muted)}
+.type-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.ticket-cust input{font-family:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--bg)}
+.ticket-cust input:focus{outline:none;border-color:var(--primary)}
+/* موعد الاستلام */
+.pickup-row{display:flex;gap:8px}
+.pk-field{flex:1;display:flex;flex-direction:column;gap:3px}
+.pk-field span{font-size:12px;color:var(--muted);font-weight:700}
+.pk-field input{font-family:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:13px;background:var(--bg)}
+.pk-field input:focus{outline:none;border-color:var(--primary)}
+/* خيار الثيم (للأصناف المغلّفة) */
+.theme-row{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#fff7ed;border:1px dashed #fdba74;border-radius:10px;padding:8px 12px}
+.theme-label{font-size:13px;font-weight:800;color:#c2410c}
+.theme-btns{display:flex;gap:6px}
+.theme-btn{border:1px solid var(--line);background:#fff;padding:7px 14px;border-radius:9px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--muted);transition:.2s}
+.theme-btn.active{background:#ea580c;color:#fff;border-color:#ea580c}
+
+.ticket-scroll{flex:1;min-height:0;display:flex;flex-direction:column}
+.ticket-items{flex:1;overflow-y:auto;padding:10px 18px;display:flex;flex-direction:column;gap:8px}
+.ticket-empty{text-align:center;color:var(--muted);margin-top:40px}
+.t-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.t-item .ti-emoji{font-size:26px}
+.t-item .ti-info{flex:1;min-width:0}
+.t-item .ti-info h4{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-item .ti-info span{color:var(--muted);font-size:12px}
+.t-item .ti-line{font-weight:800;color:var(--primary);font-size:14px;min-width:62px;text-align:left}
+.qty{display:flex;align-items:center;gap:6px}
+.qty button{width:26px;height:26px;border:1px solid var(--line);background:#fff;border-radius:7px;cursor:pointer;font-size:15px;font-weight:800;color:var(--dark)}
+.qty button:hover{border-color:var(--primary);color:var(--primary)}
+.qty span{min-width:18px;text-align:center;font-weight:700}
+.t-del{background:none;border:none;cursor:pointer;font-size:16px;color:var(--danger)}
+
+.ticket-foot{border-top:1px solid var(--line);padding:14px 18px;display:flex;flex-direction:column;gap:9px}
+.sum-row{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+.sum-row.total{font-size:20px;font-weight:800;color:var(--dark);border-top:1px solid var(--line);padding-top:9px;margin-top:2px}
+.sum-row.total b{color:var(--primary)}
+.pay-row{display:flex;gap:8px}
+.pay-btn{flex:1;border:1px solid var(--line);background:#fff;padding:9px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;transition:.2s;color:var(--muted)}
+.pay-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.cash-row{display:flex;gap:8px;align-items:center}
+.cash-row label{font-size:13px;color:var(--muted);white-space:nowrap}
+.cash-row input{flex:1;font-family:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;text-align:center;background:var(--bg)}
+.cash-row input:focus{outline:none;border-color:var(--primary)}
+.change-row{display:flex;justify-content:space-between;font-weight:700;font-size:15px;color:var(--ok)}
+.remain-row{color:var(--danger)}
+.pay-print{background:var(--primary);color:#fff;border:none;border-radius:12px;padding:15px;font-weight:800;font-size:17px;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.pay-print:hover{background:var(--primary-dark)}
+.pay-print:disabled{opacity:.5;cursor:not-allowed}
+.wa-send-btn{margin-top:8px;width:100%;background:#25D366;color:#fff;border:none;border-radius:12px;padding:14px;font-weight:800;font-size:16px;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.wa-send-btn:hover{background:#1da851}
+.wa-choose-body{display:flex;flex-direction:column;gap:12px;padding:4px 2px}
+.wa-choose-btn{background:#25D366;color:#fff;border:none;border-radius:12px;padding:16px;font-weight:800;font-size:16px;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.wa-choose-btn:hover{background:#1da851}
+.wa-choose-btn.biz{background:#0b7a63}
+.wa-choose-btn.biz:hover{background:#095f4d}
+
+/* ===== Modal / toast (shared with admin) ===== */
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:160;display:none;align-items:center;justify-content:center;padding:20px}
+.modal.show{display:flex}
+.modal-box{background:#fff;border-radius:18px;width:100%;max-width:440px;padding:24px;max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal-box.modal-wide{max-width:640px}
+
+/* ===== Customers modal ===== */
+.cust-modal-filter{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.cmf-btn{border:1px solid var(--line);background:#fff;padding:8px 16px;border-radius:20px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--muted);transition:.2s}
+.cmf-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.cust-modal-list{max-height:60vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.cust-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap;border-right:4px solid transparent}
+.cust-row.has-remain{border-right-color:var(--danger);cursor:pointer}
+.cust-row.has-remain:hover{background:#fef2f2}
+.cust-row.is-paid{border-right-color:var(--ok)}
+.cust-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0}
+.cust-dot.red{background:var(--danger);box-shadow:0 0 0 4px rgba(220,38,38,.15)}
+.cust-dot.green{background:var(--ok);box-shadow:0 0 0 4px rgba(22,163,74,.15)}
+.cust-row-info{flex:1;min-width:120px}
+.cust-row-name{font-weight:800;font-size:15px}
+.cust-row-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.cust-row-amt{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.cust-row-amt .amt-rem{color:var(--danger);font-weight:800;font-size:14px}
+.cust-row-amt .amt-paid{color:var(--ok);font-weight:800;font-size:14px}
+.cust-row-amt .amt-total{font-size:12px;color:var(--muted)}
+.cust-row-details{border:none;background:var(--primary);color:#fff;padding:8px 14px;border-radius:9px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer}
+.cust-row-details:hover{background:var(--primary-dark)}
+
+/* ===== Order details modal ===== */
+.od-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.od-name{font-weight:800;font-size:17px}
+.od-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.od-items{border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);padding:10px 0;margin-bottom:12px;display:flex;flex-direction:column;gap:7px;max-height:30vh;overflow-y:auto}
+.od-item{display:flex;justify-content:space-between;font-size:14px}
+.od-totals{display:flex;flex-direction:column;gap:5px;margin-bottom:16px}
+.od-row{display:flex;justify-content:space-between;font-size:14px}
+.od-row.big{font-weight:800;font-size:16px}
+.od-row.remain{color:var(--danger);font-weight:800;border-top:1px dashed var(--line);padding-top:6px;margin-top:3px}
+.od-actions{display:flex;gap:10px}
+.od-actions .btn{flex:1;background:var(--bg);color:var(--dark);font-size:15px;padding:12px}
+.od-actions .btn-primary{background:var(--primary);color:#fff}
+
+/* ===== Order details extra (pickup / theme) ===== */
+.od-pickup{background:var(--bg);border-radius:9px;padding:7px 12px;font-size:13px;font-weight:700;margin-bottom:8px}
+
+/* ===== Week orders board ===== */
+.week-modal{align-items:stretch;justify-content:center;padding:16px}
+.week-box{background:#fff;border-radius:18px;width:100%;max-width:1400px;padding:20px;display:flex;flex-direction:column;max-height:calc(100vh - 32px)}
+.week-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex:1;justify-content:center}
+.wk-nav-btn{border:1px solid var(--line);background:#fff;padding:7px 13px;border-radius:9px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--text,var(--dark));transition:.2s}
+.wk-nav-btn:hover{background:var(--bg)}
+.wk-range{font-weight:800;font-size:15px;color:var(--primary);padding:0 8px}
+.wk-mgr{border-color:#c2410c;color:#c2410c;font-weight:800}
+.wk-mgr:hover{background:#fff7ed}
+.wk-mgr.unlocked{background:#16a34a;color:#fff;border-color:#16a34a}
+.wk-mgr.unlocked:hover{background:#15803d}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;overflow:auto;flex:1}
+.week-col{background:var(--bg);border-radius:12px;display:flex;flex-direction:column;min-width:150px;border:1px solid var(--line)}
+.week-col.is-today{border-color:var(--primary);box-shadow:0 0 0 2px rgba(37,99,235,.25)}
+.week-col-head{display:flex;align-items:center;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);border-radius:12px 12px 0 0}
+.wch-day{font-weight:800;font-size:14px}
+.wch-date{font-size:12px;color:var(--muted)}
+.wch-count{margin-right:auto;background:var(--primary);color:#fff;font-size:12px;font-weight:800;min-width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;padding:0 6px}
+.week-col.is-today .wch-count{background:var(--primary)}
+.week-col-body{padding:8px;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+.week-empty{text-align:center;color:var(--muted);padding:16px 0;font-size:13px}
+.week-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 10px;cursor:pointer;border-right:4px solid transparent;transition:.15s}
+.week-card:hover{box-shadow:0 3px 10px rgba(15,23,42,.1)}
+.week-card.has-remain{border-right-color:var(--danger)}
+.week-card.is-paid{border-right-color:var(--ok)}
+.wc-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.wc-name{font-weight:800;font-size:13px;flex:1}
+.wc-time{font-size:11px;color:var(--muted);font-weight:700}
+.wc-del{border:none;background:#fee2e2;color:#dc2626;border-radius:7px;width:26px;height:26px;cursor:pointer;font-size:13px;line-height:1;flex-shrink:0}
+.wc-del:hover{background:#dc2626;color:#fff}
+.wc-sub{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:4px}
+.wc-rem{margin-top:4px;font-size:12px;font-weight:800;color:var(--danger)}
+/* نافذة دخول المدير */
+.mgr-note{font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+.mgr-form{display:flex;flex-direction:column;gap:12px}
+.mgr-form label{display:flex;flex-direction:column;gap:5px;font-weight:700;font-size:14px}
+.mgr-form input{font-family:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;background:var(--bg)}
+.mgr-form input:focus{outline:none;border-color:var(--primary)}
+.mgr-err{color:var(--danger);font-size:13px;font-weight:700;min-height:18px}
+@media(max-width:1000px){
+  .week-grid{grid-template-columns:repeat(7,minmax(150px,1fr));}
+}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-head h3{font-size:20px}
+.close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted)}
+
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(140px);background:var(--dark);color:#fff;padding:14px 26px;border-radius:30px;z-index:120;transition:.4s;font-weight:600;max-width:90vw;text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ===== Printable receipt ===== */
+.receipt{display:none}
+@media print{
+  body *{visibility:hidden}
+  .receipt, .receipt *{visibility:visible}
+  .receipt{display:block;position:absolute;top:0;right:0;left:0;width:80mm;margin:0 auto;padding:6mm 4mm;color:#000;font-size:12px}
+}
+.receipt .r-center{text-align:center}
+.receipt h2{font-size:18px;margin-bottom:2px}
+.receipt .r-sub{font-size:11px;color:#333}
+.receipt .r-line{border-top:1px dashed #000;margin:8px 0}
+.receipt .r-meta{font-size:11px;line-height:1.7}
+.receipt table{width:100%;border-collapse:collapse;font-size:11px}
+.receipt table th{text-align:right;border-bottom:1px solid #000;padding:3px 0}
+.receipt table th.c,.receipt table td.c{text-align:center}
+.receipt table th.l,.receipt table td.l{text-align:left}
+.receipt table td{padding:3px 0;vertical-align:top}
+.receipt .r-tot{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}
+.receipt .r-tot.big{font-size:15px;font-weight:800}
+.receipt .r-tot.remain{color:#000;border-top:1px dashed #000;margin-top:4px;padding-top:4px}
+.receipt .r-foot{text-align:center;font-size:11px;margin-top:10px}
+.receipt .r-user{text-align:center;font-size:11px;font-weight:700;margin-top:8px;border-top:1px dashed #999;padding-top:6px}
+.receipt .r-logo{display:block;max-width:160px;max-height:90px;margin:0 auto 6px;object-fit:contain}
+.receipt .r-tagline{font-size:11px;color:#333;margin-bottom:2px}
+.receipt .r-dev{text-align:center;font-size:10px;color:#555;margin-top:4px}
+
+/* ===== Responsive / وضع تطبيق الجوال ===== */
+/* عناصر تظهر فقط على الجوال */
+.mobile-bar{display:none}
+.ticket-backdrop{display:none}
+.ticket-sheet-close{display:none;background:none;border:none;font-size:22px;line-height:1;cursor:pointer;color:var(--muted);padding:4px 8px}
+
+@media(max-width:860px){
+  html,body{height:auto}
+  body{padding-bottom:78px;-webkit-text-size-adjust:100%}
+
+  /* ===== رأس مضغوط قابل للتمرير أفقياً ===== */
+  .pos-header{flex-wrap:wrap;padding:10px 12px;gap:10px;position:sticky;top:0;z-index:60;padding-top:calc(10px + env(safe-area-inset-top))}
+  .pos-header .brand small{display:none}
+  .pos-header h1{font-size:17px}
+  .pos-header .logo{font-size:26px}
+  .pos-clock{display:none}
+  .head-right{width:100%;overflow-x:auto;flex-wrap:nowrap;justify-content:flex-start;gap:8px;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .head-right::-webkit-scrollbar{display:none}
+  .report-link,.admin-link{white-space:nowrap;flex-shrink:0;font-size:13px;padding:9px 13px}
+  .pos-user{flex-shrink:0}
+
+  /* ===== الكتالوج يملأ الشاشة ===== */
+  .pos{display:block;height:auto}
+  .pos-catalog{padding:12px;height:auto;overflow:visible}
+  .pos-cats{top:0}
+  .pos-grid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+  .pos-card{padding:12px 8px;border-radius:14px}
+  .pos-card .pc-emoji{font-size:34px}
+  .pos-card .pc-name{font-size:14px}
+  .pos-card .pc-price{font-size:14px}
+
+  /* ===== بطاقة الطلب ← لوحة سفلية منزلقة ===== */
+  .pos-ticket{
+    position:fixed;left:0;right:0;bottom:0;z-index:130;
+    width:100%;
+    height:90vh;max-height:90vh;
+    height:90dvh;max-height:90dvh;
+    display:flex;flex-direction:column;
+    border:none;border-top:1px solid var(--line);
+    border-radius:22px 22px 0 0;
+    box-shadow:0 -12px 44px rgba(15,23,42,.28);
+    transform:translateY(100%);
+    transition:transform .34s cubic-bezier(.4,0,.2,1);
+  }
+  body.ticket-open .pos-ticket{transform:translateY(0)}
+
+  /* توزيع الارتفاع: الرأس والتذييل ثابتان، ومنطقة البيانات+الأصناف تمرّر معاً (تمرير واحد) */
+  .pos-ticket .ticket-head{flex-shrink:0}
+  .pos-ticket .ticket-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:block}
+  .pos-ticket .ticket-cust{flex-shrink:0;max-height:none;overflow:visible}
+  .pos-ticket .ticket-items{flex:none;overflow:visible;min-height:0}
+  .pos-ticket .ticket-foot{flex-shrink:0;padding-bottom:calc(14px + env(safe-area-inset-bottom));overscroll-behavior:contain}
+  /* ضمان ظهور زر الدفع والطباعة دائماً */
+  .pos-ticket .pay-print{flex-shrink:0}
+
+  /* مقبض سحب أعلى اللوحة + زر إغلاق */
+  .pos-ticket .ticket-head{position:relative;padding-top:22px}
+  .pos-ticket .ticket-head::before{content:"";position:absolute;top:8px;left:50%;transform:translateX(-50%);width:46px;height:5px;border-radius:3px;background:var(--line)}
+  .ticket-sheet-close{display:inline-flex}
+
+  /* خلفية معتمة */
+  .ticket-backdrop{display:block;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:125;opacity:0;pointer-events:none;transition:opacity .3s}
+  body.ticket-open .ticket-backdrop{opacity:1;pointer-events:auto}
+
+  /* ===== الشريط السفلي العائم ===== */
+  .mobile-bar{
+    display:block;position:fixed;left:0;right:0;bottom:0;z-index:120;
+    background:#fff;border-top:1px solid var(--line);
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+    box-shadow:0 -4px 20px rgba(15,23,42,.1);
+  }
+  body.ticket-open .mobile-bar{display:none}
+  .mobile-cart-btn{
+    width:100%;border:none;background:var(--primary);color:#fff;border-radius:14px;
+    padding:15px 18px;display:flex;align-items:center;gap:12px;font-family:inherit;
+    font-weight:800;font-size:16px;cursor:pointer;transition:.2s;
+  }
+  .mobile-cart-btn:active{transform:scale(.98)}
+  .mobile-cart-btn:disabled{opacity:.45;cursor:not-allowed}
+  .mcb-count{background:#fff;color:var(--primary);min-width:26px;height:26px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;padding:0 7px}
+  .mcb-text{flex:1;text-align:center}
+  .mcb-total{font-size:17px;font-weight:800}
+
+  /* النوافذ المنبثقة تملأ الشاشة بشكل مريح */
+  .modal{padding:12px}
+  .modal-box{max-width:100%;border-radius:16px;padding:18px;max-height:calc(100dvh - 24px);overflow-y:auto}
+  .notif-box{max-width:100%}
+  /* رأس النوافذ مضغوط (إطار بسيط) على الجوال */
+  .modal-head{padding:10px 14px;}
+  .modal-head h3{font-size:15px;}
+  .modal-head .close-btn{width:28px;height:28px;}
+
+  /* ===== أزرار تفاصيل الطلب: شبكة مرتّبة بدل الازدحام ===== */
+  .od-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .od-actions .btn{flex:none;width:100%;font-size:13.5px;padding:11px 8px;white-space:nowrap}
+  .od-actions .btn-primary{grid-column:1 / -1}
+  .od-items{max-height:26vh}
+
+  /* ===== لوحة طلبات الأسبوع: عمود واحد واضح بدل 7 أعمدة مزدحمة ===== */
+  .week-modal{padding:10px}
+  .week-box{padding:14px;max-height:calc(100dvh - 20px)}
+  .week-grid{display:flex;flex-direction:column;gap:10px;overflow-y:auto;overflow-x:hidden}
+  .week-col{min-width:0;width:100%}
+  .week-col-body{max-height:none;overflow:visible}
+  .wk-range{font-size:14px}
+  .wk-nav-btn{font-size:12.5px;padding:7px 11px}
+  .wc-name{font-size:13.5px}
+  .wc-top{gap:8px}
+  .week-nav{gap:6px}
+
+  /* ===== ماسح QR: يظهر كاملاً ===== */
+  .qr-scan-body{padding:4px 2px}
+  .qr-video-wrap{max-width:300px;width:100%}
+}
+
+/* شاشات صغيرة جداً */
+@media(max-width:420px){
+  .pos-grid{grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+  .pos-card .pc-emoji{font-size:30px}
+}
+
+/* ===== شاشة تسجيل الدخول (تصميم محسّن) ===== */
+.login-overlay{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;padding:20px;
+  background:linear-gradient(180deg,rgba(10,20,55,.62) 0%,rgba(9,16,45,.74) 45%,rgba(7,12,38,.86) 100%),url('splash-bg.jpg') center/cover no-repeat;
+  padding-top:calc(20px + env(safe-area-inset-top));padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+.login-overlay.show{display:flex}
+.login-card{position:relative;background:rgba(255,255,255,.98);border-radius:26px;width:100%;max-width:380px;padding:38px 30px 30px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.5);animation:loginIn .4s cubic-bezier(.2,.8,.2,1)}
+@keyframes loginIn{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+.login-logo{width:86px;height:86px;margin:0 auto 16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:44px;background:linear-gradient(135deg,var(--primary),#0ea5e9);box-shadow:0 12px 32px rgba(37,99,235,.45)}
+.login-card h2{margin:0 0 6px;font-size:23px;color:var(--dark);font-weight:800}
+.login-sub{margin:0 0 22px;color:#64748b;font-size:14px}
+.login-field{position:relative;margin-bottom:13px}
+.login-field .lf-ico{position:absolute;top:50%;right:15px;transform:translateY(-50%);font-size:17px;opacity:.55;pointer-events:none}
+.login-card input{width:100%;box-sizing:border-box;border:1.5px solid #e2e8f0;border-radius:14px;padding:14px 46px 14px 14px;font-size:16px;font-family:inherit;text-align:right;background:#f8fafc;transition:.2s}
+.login-card input:focus{outline:none;border-color:var(--primary);background:#fff;box-shadow:0 0 0 4px rgba(37,99,235,.12)}
+.login-btn{width:100%;margin-top:6px;border-radius:14px;padding:15px;font-size:17px;background:linear-gradient(135deg,var(--primary),#0ea5e9);box-shadow:0 10px 24px rgba(37,99,235,.35);color:#fff;border:none;font-weight:800;cursor:pointer;transition:.2s}
+.login-btn:hover{filter:brightness(1.06)}
+.login-btn:active{transform:scale(.98)}
+.login-err{color:#dc2626;font-size:14px;min-height:18px;margin:8px 0 2px;font-weight:700}
+.login-hint{display:block;margin-top:16px;color:#94a3b8;font-size:12px}
+@media(max-width:420px){
+  .login-card{padding:32px 22px 26px;border-radius:22px}
+  .login-logo{width:74px;height:74px;font-size:38px}
+}
+
+/* ===== صندوق المستخدم في الرأس ===== */
+.pos-user{display:flex;align-items:center;gap:8px}
+.pos-user-name{font-weight:700;font-size:14px;color:var(--dark);background:#f1f5f9;padding:6px 12px;border-radius:10px;white-space:nowrap}
+
+/* ===== حقل البحث في القوائم ===== */
+.list-search{padding:0 2px 10px}
+.list-search input{width:100%;box-sizing:border-box;border:1.5px solid #e2e8f0;border-radius:12px;padding:11px 14px;font-size:15px;font-family:inherit;text-align:right}
+.list-search input:focus{outline:none;border-color:var(--primary)}
+
+/* حقل رقم الجوال (اتجاه LTR للأرقام) */
+#custPhone{direction:ltr;text-align:right}
+
+/* ===== زر الإشعارات ===== */
+.notif-btn{position:relative}
+.notif-badge{display:inline-block;background:#ef4444;color:#fff;font-size:11px;font-weight:800;min-width:20px;height:20px;line-height:20px;border-radius:10px;text-align:center;padding:0 5px;margin-right:4px;animation:badge-pulse 1.5s ease infinite}
+@keyframes badge-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+
+/* ===== نافذة الإشعارات ===== */
+.notif-modal{z-index:200}
+.notif-box{background:#fff;border-radius:18px;width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.notif-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1.5px solid #f1f5f9}
+.notif-head h3{margin:0;font-size:18px}
+.notif-head-actions{display:flex;gap:8px;align-items:center}
+.notif-clear{border:none;background:none;color:#ef4444;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+/* زر تفعيل تنبيهات النظام */
+.sys-notif-btn{border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;padding:6px 11px;border-radius:9px;transition:.2s;white-space:nowrap}
+.sys-notif-btn:hover{background:var(--primary-light)}
+.sys-notif-btn.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.sys-notif-btn.off{background:#fef2f2;border-color:var(--danger);color:var(--danger)}
+.notif-list{flex:1;overflow-y:auto;padding:10px 14px}
+.notif-empty{text-align:center;color:#94a3b8;padding:30px 0;font-size:15px}
+.notif-item{display:flex;align-items:flex-start;gap:10px;padding:12px;border-radius:12px;margin-bottom:8px;background:#f8fafc;border-right:4px solid var(--primary);transition:.2s}
+.notif-item:hover{background:#f1f5f9}
+.notif-icon{font-size:22px;flex-shrink:0}
+.notif-body{flex:1;min-width:0}
+.notif-title{font-weight:700;font-size:15px;margin-bottom:2px;color:var(--dark)}
+.notif-text{font-size:13px;color:#64748b;line-height:1.4}
+.notif-time{font-size:11px;color:#94a3b8;margin-top:4px;display:block}
+.notif-item.unread{border-right-color:#ef4444;background:#fef2f2}
+.notif-item.unread .notif-title{color:#dc2626}
+
+/* رقم الطلب في بطاقة الأسبوع */
+.wc-no{font-weight:800;font-size:12px;color:var(--primary);background:rgba(0,0,0,.04);padding:1px 7px;border-radius:8px}
+
+/* ===== نافذة تفاصيل الثيم ===== */
+.theme-detail-body{padding:4px 0}
+.td-label{display:block;font-weight:700;margin:12px 0 8px;font-size:15px}
+.occasion-btns{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.occasion-btn{border:2px solid #e2e8f0;border-radius:12px;padding:10px 18px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;background:#fff;color:var(--dark);transition:.2s}
+.occasion-btn:hover{border-color:var(--primary);background:rgba(99,102,241,.06)}
+.occasion-btn.active{border-color:var(--primary);background:var(--primary);color:#fff}
+#themeCustomText{width:100%;box-sizing:border-box;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;font-size:15px;font-family:inherit;text-align:right;margin-bottom:14px}
+#themeCustomText:focus{outline:none;border-color:var(--primary)}
+#saveThemeBtn{width:100%}
+
+/* ===== مربع إنجاز الطلب في لوحة الأسبوع ===== */
+.wc-done{display:flex;align-items:center;gap:4px;margin-top:4px;cursor:pointer;user-select:none}
+.wc-done input[type=checkbox]{width:18px;height:18px;accent-color:var(--primary);cursor:pointer}
+.wc-done span{font-size:13px;color:#64748b;font-weight:600}
+.week-card.is-done{opacity:.55;background:#f1f5f9}
+.week-card.is-done .wc-top{text-decoration:line-through}

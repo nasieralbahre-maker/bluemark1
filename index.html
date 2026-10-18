@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+<title>Sweets — نظام الكاشير</title>
+<!-- وضع تطبيق الجوال (يفتح بملء الشاشة عند الإضافة للشاشة الرئيسية) -->
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="الكاشير" />
+<meta name="theme-color" content="#1e4ed0" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="dashboard.css" />
+<link rel="stylesheet" href="brand.css" />
+<style id="bmSplashStyle">
+  .bm-splash{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(180deg,rgba(10,20,55,.62) 0%,rgba(9,16,45,.74) 45%,rgba(7,12,38,.88) 100%),url('splash-bg.jpg') center/cover no-repeat;
+    font-family:'Cairo',system-ui,sans-serif;opacity:1;transition:opacity .7s ease;cursor:pointer;overflow:hidden;}
+  .bm-splash.bm-hide{opacity:0;}
+  .bm-splash::before,.bm-splash::after{content:"";position:absolute;border-radius:50%;
+    background:radial-gradient(circle,rgba(37,99,235,.30),transparent 70%);filter:blur(14px);pointer-events:none;}
+  .bm-splash::before{width:420px;height:420px;top:-130px;right:-130px;}
+  .bm-splash::after{width:360px;height:360px;bottom:-130px;left:-130px;
+    background:radial-gradient(circle,rgba(96,165,250,.26),transparent 70%);}
+  .bm-splash-inner{position:relative;text-align:center;z-index:2;padding:26px;
+    animation:bmFadeUp .8s cubic-bezier(.2,.8,.2,1) both;}
+  .bm-logo-wrap{width:150px;height:150px;margin:0 auto 24px;border-radius:34px;
+    background:rgba(255,255,255,.96);display:flex;align-items:center;justify-content:center;
+    box-shadow:0 24px 60px -12px rgba(10,20,55,.75),0 0 0 10px rgba(255,255,255,.08);
+    backdrop-filter:blur(2px);animation:bmPop .9s cubic-bezier(.18,1.25,.4,1) both;}
+  .bm-logo{width:76%;height:76%;object-fit:contain;animation:bmFloat 3s ease-in-out 1s infinite;}
+  .bm-sys{color:#dbeafe;font-size:19px;font-weight:600;margin:0 0 8px;letter-spacing:.5px;
+    text-shadow:0 2px 14px rgba(0,0,0,.6);opacity:0;animation:bmFadeUp .7s ease .35s both;}
+  .bm-brand{color:#fff;font-size:36px;font-weight:800;margin:0;line-height:1.25;
+    background:linear-gradient(90deg,#93c5fd,#ffffff 45%,#bfdbfe);-webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;text-shadow:0 2px 30px rgba(96,165,250,.45);
+    opacity:0;animation:bmFadeUp .7s ease .55s both;}
+  .bm-tagline{color:#bfdbfe;font-size:15px;font-weight:600;margin-top:10px;letter-spacing:normal;
+    text-transform:none;text-shadow:0 2px 12px rgba(0,0,0,.55);
+    opacity:0;animation:bmFadeUp .7s ease .75s both;}
+  .bm-progress{width:min(340px,76vw);margin:32px auto 0;opacity:0;animation:bmFadeUp .7s ease .95s both;}
+  .bm-bar{position:relative;height:9px;border-radius:999px;overflow:hidden;
+    background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);}
+  .bm-bar-fill{position:absolute;top:0;bottom:0;width:40%;border-radius:999px;
+    background:linear-gradient(90deg,transparent,#60a5fa 30%,#ffffff 55%,#60a5fa 80%,transparent);
+    box-shadow:0 0 16px rgba(96,165,250,.85);animation:bmSlide 1.4s cubic-bezier(.5,0,.5,1) infinite;}
+  .bm-loading-text{margin-top:13px;color:#e0ecff;font-size:14px;font-weight:600;letter-spacing:.3px;
+    text-shadow:0 2px 10px rgba(0,0,0,.5);}
+  @keyframes bmFadeUp{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:none;}}
+  @keyframes bmPop{from{opacity:0;transform:scale(.6) rotate(-8deg);}to{opacity:1;transform:none;}}
+  @keyframes bmFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+  @keyframes bmSlide{0%{right:-42%;}100%{right:102%;}}
+  @media(max-width:480px){.bm-logo-wrap{width:120px;height:120px;border-radius:28px;}
+    .bm-sys{font-size:17px;}.bm-brand{font-size:28px;}.bm-tagline{font-size:13.5px;}}
+
+  /* حقل تعديل الكمية المباشر (مكتفٍ ذاتياً) */
+  .qty .qty-input{
+    width:46px;min-width:46px;text-align:center;font-family:'Cairo',system-ui,sans-serif;
+    font-size:16px;font-weight:800;color:#1e3a8a;line-height:1.2;
+    border:1.5px solid #bfdbfe;background:#eff6ff;border-radius:10px;
+    padding:5px 2px;margin:0 2px;outline:none;transition:border-color .15s,box-shadow .15s,background .15s;
+    -moz-appearance:textfield;appearance:textfield;
+  }
+  .qty .qty-input:focus{border-color:#2563eb;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.18);}
+  .qty .qty-input::-webkit-outer-spin-button,
+  .qty .qty-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+
+  /* ===== نوافذ منبثقة مكتفية ذاتياً (بديل styles.css المفقود) ===== */
+  .modal{
+    position:fixed;inset:0;z-index:8000;display:none;align-items:center;justify-content:center;
+    background:rgba(15,23,42,.55);backdrop-filter:blur(3px);padding:18px;
+    font-family:'Cairo',system-ui,sans-serif;direction:rtl;
+  }
+  .modal.show{display:flex;}
+  .modal-box{
+    width:min(440px,100%);max-height:90vh;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fff;border-radius:18px;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.55);animation:modalIn .25s ease both;
+  }
+  .modal-box.modal-wide{width:min(860px,100%);}
+  @keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.98);}to{opacity:1;transform:none;}}
+  .modal-head{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:linear-gradient(120deg,#1e3a8a,#2563eb);color:#fff;padding:14px 18px;
+    border-radius:18px 18px 0 0;position:sticky;top:0;
+  }
+  .modal-head h3{margin:0;font-size:16.5px;font-weight:800;}
+  .close-btn{
+    border:none;background:rgba(255,255,255,.2);color:#fff;width:32px;height:32px;border-radius:10px;
+    cursor:pointer;font-size:15px;line-height:1;transition:background .15s;flex:none;
+  }
+  .close-btn:hover{background:rgba(255,255,255,.35);}
+
+  /* نافذة الإيداع / الحوالة */
+  .deposit-body{padding:18px;}
+  .deposit-type-row{display:flex;gap:10px;margin-bottom:16px;}
+  .dep-type-btn{
+    flex:1;font-family:'Cairo',sans-serif;font-size:14.5px;font-weight:800;cursor:pointer;
+    border:2px solid #e2e8f0;background:#f8fafc;color:#334155;border-radius:14px;padding:13px 8px;
+    transition:border-color .15s,background .15s,color .15s,transform .15s;
+  }
+  .dep-type-btn:hover{background:#eef2f7;}
+  .dep-type-btn.active{border-color:#2563eb;background:#eff6ff;color:#1e3a8a;box-shadow:0 6px 14px -8px rgba(37,99,235,.6);}
+  .dep-type-btn:active{transform:scale(.97);}
+  .deposit-exch-label{font-size:13px;font-weight:800;color:#334155;margin:4px 2px 10px;}
+  .deposit-exch-list{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;}
+  .exch-btn{
+    width:100%;font-family:'Cairo',sans-serif;font-size:14.5px;font-weight:700;cursor:pointer;color:#fff;
+    border:none;border-radius:13px;padding:13px 14px;text-align:center;position:relative;
+    box-shadow:0 6px 14px -8px rgba(0,0,0,.4);opacity:.92;
+    transition:transform .15s,opacity .15s,box-shadow .15s;
+  }
+  .exch-btn:hover{opacity:1;}
+  .exch-btn:active{transform:scale(.98);}
+  .exch-btn.active{opacity:1;box-shadow:0 0 0 3px #fff,0 0 0 6px rgba(37,99,235,.65);}
+  .exch-btn.active::after{content:'\2714';position:absolute;inset-inline-start:14px;top:50%;transform:translateY(-50%);font-size:15px;}
+  .deposit-empty{
+    text-align:center;color:#94a3b8;font-size:13px;padding:22px 10px;
+    background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;
+  }
+  .pay-print{
+    width:100%;font-family:'Cairo',sans-serif;font-size:15.5px;font-weight:800;cursor:pointer;color:#fff;
+    background:linear-gradient(135deg,#16a34a,#22c55e);border:none;border-radius:14px;padding:14px;
+    box-shadow:0 10px 22px -10px rgba(22,163,74,.75);transition:transform .15s;
+  }
+  .pay-print:active{transform:scale(.98);}
+
+  /* زر قراءة كود QR في رأس الطلب */
+  .qr-scan-btn{
+    font-family:'Cairo',sans-serif;font-size:13.5px;font-weight:800;cursor:pointer;color:#fff;
+    border:none;border-radius:12px;padding:9px 14px;
+    background:linear-gradient(135deg,#7c3aed,#a855f7);
+    box-shadow:0 8px 18px -9px rgba(124,58,237,.8);transition:transform .15s,box-shadow .15s;
+  }
+  .qr-scan-btn:hover{box-shadow:0 10px 22px -8px rgba(124,58,237,.9);}
+  .qr-scan-btn:active{transform:scale(.97);}
+
+  /* نافذة ماسح QR */
+  .qr-scan-body{padding:18px;display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .qr-video-wrap{
+    position:relative;width:100%;max-width:300px;height:min(300px,72vw);aspect-ratio:1/1;
+    border-radius:16px;overflow:hidden;
+    background:#0f172a;box-shadow:inset 0 0 0 2px rgba(124,58,237,.4);
+  }
+  .qr-video-wrap video{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(1);}
+  .qr-scan-frame{
+    position:absolute;inset:14%;border:3px solid rgba(168,85,247,.9);border-radius:14px;
+    box-shadow:0 0 0 2000px rgba(15,23,42,.35);pointer-events:none;
+  }
+  .qr-scan-line{
+    position:absolute;left:14%;right:14%;height:3px;top:14%;
+    background:linear-gradient(90deg,transparent,#a855f7,transparent);
+    animation:qrScanMove 2s ease-in-out infinite;pointer-events:none;
+  }
+  @keyframes qrScanMove{0%{top:14%;}50%{top:84%;}100%{top:14%;}}
+  .qr-scan-hint{font-size:13.5px;color:#475569;font-weight:700;text-align:center;}
+  .qr-scan-status{font-size:12.5px;color:#7c3aed;font-weight:800;min-height:16px;text-align:center;}
+  .qr-scan-cancel{
+    width:100%;max-width:360px;font-family:'Cairo',sans-serif;font-size:14.5px;font-weight:800;cursor:pointer;
+    color:#334155;background:#f1f5f9;border:2px solid #e2e8f0;border-radius:14px;padding:12px;transition:background .15s;
+  }
+  .qr-scan-cancel:hover{background:#e2e8f0;}
+  .qr-scan-canvas{display:none;}
+
+  /* ===== نافذة طلبات الأسبوع — إصلاح الازدحام (تحديد أعلى من .modal) ===== */
+  .week-modal.modal{align-items:stretch;justify-content:center;padding:16px;}
+  .week-modal .week-box{
+    width:100%;max-width:1400px;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);
+    padding:0;overflow:hidden;display:flex;flex-direction:column;
+  }
+  .week-modal .week-box .modal-head{flex:none;border-radius:18px 18px 0 0;}
+  .week-modal .week-box .list-search{flex:none;padding:12px 16px 0;}
+  .week-modal .week-box .list-search input{
+    width:100%;box-sizing:border-box;font-family:'Cairo',sans-serif;font-size:14px;
+    padding:10px 14px;border:2px solid #e2e8f0;border-radius:12px;background:#f8fafc;
+  }
+  .week-modal .week-grid{
+    display:grid;grid-template-columns:repeat(7,minmax(170px,1fr));gap:12px;
+    flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 16px;
+  }
+  .week-modal .week-col{
+    display:flex;flex-direction:column;min-width:0;min-height:0;max-height:100%;
+    background:#f1f5f9;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;
+  }
+  .week-modal .week-col-head{flex:none;position:sticky;top:0;z-index:1;}
+  .week-modal .week-col-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:8px;}
+  /* على الجوال: رأس مضغوط (إطار بسيط) + أعمدة تتراصّ عمودياً مع تمرير واحد */
+  @media(max-width:720px){
+    .week-modal.modal{padding:8px;}
+    .week-modal .week-box{max-height:calc(100vh - 16px);max-height:calc(100dvh - 16px);}
+    /* رأس صغير وبسيط لا يأخذ مساحة كبيرة */
+    .week-modal .week-box .modal-head{
+      flex-wrap:nowrap;align-items:center;gap:8px;padding:9px 12px;
+    }
+    .week-modal .week-box .modal-head h3{font-size:14px;flex:none;white-space:nowrap;}
+    .week-modal .week-nav{
+      flex:1 1 auto;min-width:0;display:flex;flex-wrap:nowrap;gap:6px;
+      overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+      justify-content:flex-start;scrollbar-width:none;
+    }
+    .week-modal .week-nav::-webkit-scrollbar{display:none;}
+    .week-modal .wk-nav-btn{flex:none;white-space:nowrap;font-size:12px;padding:6px 10px;}
+    .week-modal .wk-range{flex:none;white-space:nowrap;font-size:12px;}
+    /* الشبكة تتمدد حسب عدد الطلبات وتمرّر عمودياً ككتلة واحدة */
+    .week-modal .week-grid{
+      display:flex;flex-direction:column;gap:10px;
+      overflow-y:auto;overflow-x:hidden;padding:12px;
+      flex:1 1 auto;min-height:0;
+    }
+    .week-modal .week-col{width:100%;max-height:none;flex:none;}
+    /* أهم إصلاح: إظهار كل الطلبات داخل اليوم دون قصّ أو تمرير داخلي */
+    .week-modal .week-col-body{max-height:none;overflow:visible;}
+  }
+</style>
+</head>
+<body>
+
+<!-- شاشة الترحيب (الشعار) — تظهر عند فتح النظام -->
+<div class="bm-splash" id="bmSplash">
+  <div class="bm-splash-inner">
+    <div class="bm-logo-wrap"><img src="logo.png" alt="شعار" class="bm-logo" /></div>
+    <p class="bm-sys">النظام الرقمي</p>
+    <h1 class="bm-brand">حلويات العلامة الزرقاء</h1>
+    <div class="bm-tagline">لأجود أنواع الحلويات والبسكويت</div>
+    <div class="bm-progress">
+      <div class="bm-bar"><span class="bm-bar-fill"></span></div>
+      <div class="bm-loading-text">جارٍ تحميل البيانات…</div>
+    </div>
+  </div>
+</div>
+
+<!-- شاشة تسجيل الدخول -->
+<div class="login-overlay" id="loginOverlay">
+  <form class="login-card" id="loginForm">
+    <div class="login-logo"><img src="logo.png" alt="Sweets" /></div>
+    <h2 id="loginTitle" class="br-display">تسجيل الدخول</h2>
+    <p class="login-sub">أدخل اسم المستخدم وكلمة المرور</p>
+    <div class="login-field"><span class="lf-ico">👤</span><input type="text" id="loginUser" placeholder="اسم المستخدم" autocomplete="off" /></div>
+    <div class="login-field"><span class="lf-ico">🔒</span><input type="password" id="loginPass" placeholder="كلمة المرور" autocomplete="off" /></div>
+    <div class="login-err" id="loginErr"></div>
+    <button type="submit" class="btn btn-primary login-btn">دخول</button>
+    <div class="login-bio-sep" id="loginBioSep">— أو الدخول السريع بالبصمة —</div>
+    <div class="login-bio-row" id="loginBioRow">
+      <button type="button" class="bio-ico-btn bio-ico-finger" id="bioLoginBtn" title="دخول ببصمة الإصبع" aria-label="دخول ببصمة الإصبع">
+        <span class="bio-ico-glyph">👆</span>
+        <span class="bio-ico-txt">بصمة الإصبع</span>
+      </button>
+      <button type="button" class="bio-ico-btn bio-ico-eye" id="bioFaceLoginBtn" title="دخول ببصمة العين / الوجه" aria-label="دخول ببصمة العين">
+        <span class="bio-ico-glyph">👁️</span>
+        <span class="bio-ico-txt">بصمة العين</span>
+      </button>
+    </div>
+    <button type="button" class="btn login-signup-btn" id="openSignupBtn">➕ إنشاء حساب جديد</button>
+    <button type="button" class="login-check-btn" id="checkStatusBtn">🔑 لدي طلب — إدخال كود التفعيل</button>
+    <small class="login-hint">برمجة م / ابراهيم حامد الصيعري / موسسة الامان الاحترافي</small>
+  </form>
+</div>
+
+<!-- نافذة إنشاء حساب جديد -->
+<!-- نافذة إنشاء حساب جديد -->
+<style id="bmSignupStyle">
+  /* صف أيقونتي الدخول الحيوي (بصمة الإصبع + بصمة العين) جنبًا إلى جنب في شاشة الدخول */
+  .login-bio-row{display:flex;gap:12px;margin-top:13px;}
+  .login-bio-row.hidden{display:none !important;}
+  .login-bio-sep{margin-top:14px;text-align:center;font-size:12.5px;font-weight:700;color:#94a3b8;}
+  .login-bio-sep.hidden{display:none !important;}
+  .bio-ico-btn{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    border:none;border-radius:16px;padding:14px 8px;cursor:pointer;color:#fff;font-family:inherit;
+    transition:transform .15s,box-shadow .15s,filter .15s;}
+  .bio-ico-btn:hover{transform:translateY(-2px);}
+  .bio-ico-btn:active{transform:translateY(0);}
+  .bio-ico-glyph{font-size:30px;line-height:1;}
+  .bio-ico-txt{font-size:13px;font-weight:800;}
+  .bio-ico-finger{background:linear-gradient(135deg,#059669,#10b981);box-shadow:0 8px 20px rgba(16,185,129,.30);}
+  .bio-ico-finger:hover{box-shadow:0 12px 26px rgba(16,185,129,.42);}
+  .bio-ico-eye{background:linear-gradient(135deg,#7c3aed,#a855f7);box-shadow:0 8px 20px rgba(124,58,237,.30);}
+  .bio-ico-eye:hover{box-shadow:0 12px 26px rgba(124,58,237,.42);}
+  .bio-ico-btn.bio-off{filter:grayscale(.55) opacity(.72);}
+  .login-bio-btn{display:block;width:100%;margin-top:11px;background:linear-gradient(135deg,#059669,#10b981);
+    color:#fff;border:none;border-radius:13px;padding:13px;font-family:inherit;font-size:15px;font-weight:800;
+    cursor:pointer;box-shadow:0 8px 20px rgba(16,185,129,.28);transition:transform .15s,box-shadow .15s;}
+  .login-bio-btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(16,185,129,.38);}
+  .login-bio-btn.hidden{display:none !important;}
+  /* زر الدخول ببصمة العين/الوجه */
+  .login-face-btn{display:block;width:100%;margin-top:9px;background:linear-gradient(135deg,#7c3aed,#a855f7);
+    color:#fff;border:none;border-radius:13px;padding:13px;font-family:inherit;font-size:15px;font-weight:800;
+    cursor:pointer;box-shadow:0 8px 20px rgba(124,58,237,.28);transition:transform .15s,box-shadow .15s;}
+  .login-face-btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(124,58,237,.38);}
+  .login-face-btn.hidden{display:none !important;}
+  .bio-enroll-face{background:linear-gradient(135deg,#7c3aed,#a855f7);box-shadow:0 4px 12px rgba(124,58,237,.25);}
+  /* زر تفعيل البصمة داخل صندوق المستخدم */
+  .bio-enroll-btn{background:linear-gradient(135deg,#059669,#10b981);color:#fff;border:none;border-radius:11px;
+    padding:8px 12px;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(16,185,129,.25);}
+  .bio-enroll-btn:hover{transform:translateY(-1px);}
+  .bio-enroll-btn.hidden{display:none !important;}
+  .login-signup-btn{display:block;width:100%;margin-top:11px;background:linear-gradient(135deg,#0ea5e9,#2563eb);
+    color:#fff;border:none;border-radius:13px;padding:13px;font-family:inherit;font-size:15px;font-weight:800;
+    cursor:pointer;box-shadow:0 8px 20px rgba(37,99,235,.25);transition:transform .15s,box-shadow .15s;}
+  .login-signup-btn:hover{transform:translateY(-1px);box-shadow:0 12px 26px rgba(37,99,235,.35);}
+  .login-check-btn{display:block;width:100%;margin-top:9px;background:transparent;color:#64748b;border:2px dashed #cbd5e1;
+    border-radius:13px;padding:11px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer;transition:all .15s;}
+  .login-check-btn:hover{border-color:#0ea5e9;color:#0284c7;background:#f0f9ff;}
+  .signup-box{max-width:460px;width:94%;max-height:92vh;overflow-y:auto;border-radius:20px;background:#fff;
+    box-shadow:0 30px 70px rgba(2,6,23,.4);direction:rtl;}
+  .signup-box .modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:16px 18px;border-bottom:1px solid #e2e8f0;position:sticky;top:0;background:#fff;z-index:2;border-radius:20px 20px 0 0;}
+  .signup-box .modal-head h3{margin:0;font-size:18px;color:#0f172a;}
+  .signup-box .close-btn{background:#f1f5f9;border:none;width:36px;height:36px;border-radius:11px;font-size:16px;cursor:pointer;color:#475569;}
+  .signup-box .close-btn:hover{background:#e2e8f0;}
+  .signup-note{padding:12px 18px 0;margin:0;font-size:13px;color:#64748b;line-height:1.8;}
+  .signup-form{padding:14px 18px 20px;display:flex;flex-direction:column;gap:11px;}
+  .signup-form label,.activate-form label{display:flex;flex-direction:column;gap:6px;font-size:13.5px;font-weight:800;color:#334155;}
+  .signup-form input,.activate-form input{background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:11px 13px;
+    font-family:inherit;font-size:15px;color:#0f172a;outline:none;transition:border-color .15s,box-shadow .15s;}
+  .signup-form input:focus,.activate-form input:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.14);background:#fff;}
+  .signup-err,.activate-err{color:#b91c1c;font-size:13px;min-height:16px;font-weight:700;text-align:center;}
+  .signup-ok{color:#047857;font-size:13px;font-weight:700;text-align:center;line-height:1.8;}
+  .signup-form .btn-block,.activate-form .btn-block{width:100%;}
+  .activate-form{padding:14px 18px 20px;display:flex;flex-direction:column;gap:11px;}
+  .activate-code-input{text-align:center;letter-spacing:12px;font-size:26px;font-weight:900;direction:ltr;padding-left:16px;}
+  .activate-status{padding:16px 18px;font-size:14px;line-height:1.9;color:#334155;text-align:center;}
+  .activate-status .big{font-size:38px;display:block;margin-bottom:6px;}
+  .activate-badge{display:inline-block;padding:5px 14px;border-radius:99px;font-size:12.5px;font-weight:800;margin-top:8px;}
+  .activate-badge.pending{background:#fef3c7;color:#92400e;}
+  .activate-badge.approved{background:#d1fae5;color:#065f46;}
+  .activate-badge.rejected{background:#fee2e2;color:#991b1b;}
+  /* نافذة الترحيب */
+  .welcome-modal{align-items:center;justify-content:center;}
+  .welcome-box{background:linear-gradient(160deg,#1e3a8a,#2563eb 55%,#3b82f6);color:#fff;
+    max-width:420px;width:92%;border-radius:24px;padding:30px 24px;text-align:center;direction:rtl;
+    box-shadow:0 30px 80px rgba(2,6,23,.5);animation:bmWelcomeIn .5s cubic-bezier(.2,.9,.3,1.2);}
+  @keyframes bmWelcomeIn{from{transform:scale(.85) translateY(20px);opacity:0;}to{transform:none;opacity:1;}}
+  .welcome-emoji{font-size:56px;animation:bmBounce 1.4s infinite;}
+  @keyframes bmBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+  .welcome-box h2{margin:10px 0 8px;font-size:24px;}
+  .welcome-box p{margin:0 0 20px;font-size:14.5px;line-height:2;opacity:.95;}
+  .welcome-box .btn-block{background:#fff;color:#1e3a8a;border:none;border-radius:13px;padding:14px;font-family:inherit;
+    font-size:16px;font-weight:900;cursor:pointer;width:100%;box-shadow:0 10px 24px rgba(2,6,23,.25);}
+  .welcome-box .btn-block:hover{transform:translateY(-1px);}
+</style>
+<div class="modal" id="signupModal">
+  <div class="modal-box signup-box">
+    <div class="modal-head">
+      <h3>📝 إنشاء حساب جديد</h3>
+      <button class="close-btn" id="closeSignupModal">✕</button>
+    </div>
+    <p class="signup-note">املأ البيانات التالية. سيُراجع المدير طلبك ويعطيك كود التفعيل المكوّن من 6 أرقام لتأكيد الحساب.</p>
+    <form id="signupForm" class="signup-form">
+      <label>الاسم الأول<input type="text" id="suFirst" autocomplete="off" placeholder="الاسم الأول" /></label>
+      <label>الاسم الثاني<input type="text" id="suSecond" autocomplete="off" placeholder="الاسم الثاني" /></label>
+      <label>رقم الجوال<input type="tel" id="suPhone" autocomplete="off" placeholder="مثال: 77xxxxxxx" /></label>
+      <label>المدينة<input type="text" id="suCity" autocomplete="off" placeholder="المدينة" /></label>
+      <label>اسم المستخدم (للدخول)<input type="text" id="suUser" autocomplete="off" placeholder="username" /></label>
+      <label>كلمة المرور<input type="password" id="suPass" autocomplete="off" placeholder="••••••" /></label>
+      <div class="signup-err" id="signupErr"></div>
+      <button type="submit" class="btn btn-primary btn-block" id="signupSubmitBtn">🚀 إرسال طلب إنشاء الحساب</button>
+    </form>
+  </div>
+</div>
+
+<!-- نافذة تأكيد الطلب وإدخال كود التفعيل -->
+<div class="modal" id="activateModal">
+  <div class="modal-box signup-box">
+    <div class="modal-head">
+      <h3>🔑 تفعيل الحساب</h3>
+      <button class="close-btn" id="closeActivateModal">✕</button>
+    </div>
+    <div id="activateBody"></div>
+  </div>
+</div>
+
+<!-- نافذة الترحيب بالمستخدم الجديد (أول تسجيل دخول) -->
+<div class="modal welcome-modal" id="welcomeModal">
+  <div class="welcome-box">
+    <div class="welcome-emoji">🎉</div>
+    <h2 id="welcomeTitle">أهلاً بك!</h2>
+    <p id="welcomeText"></p>
+    <button class="btn btn-primary btn-block" id="welcomeOkBtn">🚀 هيا نبدأ العمل</button>
+  </div>
+</div>
+
+<header class="pos-header">
+  <div class="brand">
+    <span class="logo"><img src="logo.png" alt="Sweets" style="width:40px;height:40px;object-fit:contain;background:#fff;border-radius:10px;padding:3px;display:block" /></span>
+    <div>
+      <h1 id="brandName">نظام الكاشير</h1>
+      <small>نقطة بيع وطباعة فواتير</small>
+    </div>
+    <!-- أزرار المدير بجانب الشعار (تظهر للمدير فقط) -->
+    <button class="brand-switch new-order" id="dashToCashier" style="display:none">➕ كاشير</button>
+    <button class="brand-switch to-dash" id="dashLink" style="display:none">📊 لوحة</button>
+    <button class="brand-switch qr-scan-btn" id="qrScanBtn" style="display:none">📷 مسح QR</button>
+    <button class="brand-switch log-btn" id="activityLogBtn" style="display:none">📋 السجل</button>
+  </div>
+  <div class="head-right">
+    <div class="pos-clock" id="posClock"></div>
+    <div class="pos-user" id="posUserBox" style="display:none">
+      <span class="pos-user-name" id="posUserName"></span>
+      <button class="report-link" id="posSwitchBtn">🔄 تبديل</button>
+      <button class="report-link pos-update-link" id="posUpdateBtn">🔄 تحديث</button>
+      <button class="report-link" id="extFormBtn">➕ استمارة <span class="acctreq-badge" id="extSubBadge" style="display:none">0</span></button>
+      <button class="bio-enroll-btn hidden" id="bioEnrollBtn">👆 بصمة</button>
+      <button class="bio-enroll-btn bio-enroll-face hidden" id="bioFaceEnrollBtn">👁️ وجه</button>
+      <button class="report-link" id="posLogoutBtn">🚪 خروج</button>
+    </div>
+    <button class="report-link" id="customersBtn">🧾 العملاء</button>
+    <button class="report-link notif-btn" id="notifBtn">🔔 الإشعارات <span class="notif-badge" id="notifBadge" style="display:none">0</span></button>
+    <button class="report-link" id="messagesBtn" style="position:relative">💬 الرسائل</button>
+    <button class="report-link" id="weekBtn">📅 الأسبوع</button>
+    <button class="report-link" id="tasksBtn" style="position:relative">✅ مهام <span class="notif-badge" id="tasksBadge" style="display:none">0</span></button>
+    <button class="report-link" id="dailyReportBtn">📊 التقارير</button>
+    <a href="admin.html" class="admin-link" id="adminLink">⚙️ التحكم</a>
+  </div>
+</header>
+
+<div class="pos">
+  <!-- Catalog -->
+  <main class="pos-catalog">
+    <div class="pos-cats" id="categories"></div>
+    <div class="pos-grid" id="menuGrid"></div>
+  </main>
+
+  <!-- Current ticket -->
+  <aside class="pos-ticket">
+    <div class="ticket-head">
+      <h2>الطلب الحالي</h2>
+      <button class="ticket-new" id="clearTicket">➕ طلب جديد</button>
+      <button class="ticket-sheet-close" id="ticketSheetClose" aria-label="إغلاق">✕</button>
+    </div>
+
+    <div class="ticket-scroll">
+    <div class="ticket-cust">
+      <div class="type-row" id="typeRow">
+        <button class="type-btn active" data-type="محلي">🥗 محلي</button>
+        <button class="type-btn" data-type="سفري">🥡 سفري</button>
+        <button class="type-btn" data-type="توصيل">🛵 توصيل</button>
+      </div>
+      <input type="text" id="custName" placeholder="اسم العميل (اختياري)" maxlength="50" />
+      <input type="tel" id="custPhone" placeholder="📱 رقم الجوال (اختياري)" maxlength="20" />
+      <div class="pickup-row">
+        <label class="pk-field"><span>📅 يوم الاستلام</span><input type="date" id="pickupDate" /></label>
+        <label class="pk-field"><span>⏰ وقت الاستلام</span><input type="time" id="pickupTime" /></label>
+      </div>
+      <div class="theme-row" id="themeRow">
+        <span class="theme-label">🎁 الثيم</span>
+        <div class="theme-btns">
+          <button type="button" class="theme-btn active" data-theme="no">بدون ثيم</button>
+          <button type="button" class="theme-btn" data-theme="yes">مع ثيم</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ticket-items" id="ticketItems"></div>
+    </div>
+
+    <div class="ticket-foot">
+      <div class="sum-row" id="subRow"><span>المجموع الفرعي</span><span id="subTotal">0 ر.س</span></div>
+      <div class="sum-row" id="vatRow"><span id="vatLabel">ضريبة القيمة المضافة (15%)</span><span id="vatVal">0 ر.س</span></div>
+      <div class="sum-row total"><span>الإجمالي</span><b id="grandTotal">0 ر.س</b></div>
+
+      <div class="pay-row" id="payRow">
+        <button class="pay-btn active" data-pay="cash">💵 نقد</button>
+        <button class="pay-btn" data-pay="card" id="cardBtn">🏦 إيداع أو حوالة</button>
+        <button class="pay-btn" data-pay="deposit" id="depositBtn">🧾 عربون</button>
+      </div>
+
+      <div class="cash-row" id="cashRow">
+        <label id="paidLabel">المدفوع</label>
+        <input type="number" id="paidAmount" min="0" step="0.5" placeholder="0" />
+      </div>
+      <div class="change-row" id="changeRow" style="display:none"><span>الباقي</span><span id="changeVal">0 ر.س</span></div>
+      <div class="change-row remain-row" id="remainRow" style="display:none"><span>المتبقي على العميل</span><span id="remainVal">0 ر.س</span></div>
+
+      <button class="pay-print" id="payPrintBtn">🖨️ دفع وطباعة الفاتورة</button>
+      <button class="wa-send-btn" id="waInvoiceBtn" style="display:none">📲 إرسال الفاتورة واتساب</button>
+    </div>
+  </aside>
+</div>
+
+<!-- ══ لوحة المعلومات المدمجة (تظهر للمدير مكان شبكة الوجبات) ══ -->
+<div id="dashboardView" style="display:none">
+  <div class="dash-embed">
+
+    <!-- شريط علوي صغير -->
+    <div class="dash-ehead">
+      <div class="deh-brand">
+        <span class="deh-ic">📊</span>
+        <div>
+          <h2 id="dashBrand">لوحة المعلومات</h2>
+          <div class="deh-sub"><span id="dashDate">—</span> · <span id="dashClock">—</span></div>
+        </div>
+      </div>
+      <div class="deh-tools">
+        <span class="conn-pill" id="dashConn">…</span>
+        <button type="button" class="rep-btn acctreq-btn" id="dashAcctReqBtn">🆕 طلبات الحساب<span class="acctreq-badge" id="acctReqBadge" style="display:none">0</span></button>
+        <button type="button" class="rep-btn maint-btn" id="dashMaintBtn">🚨 طوارئ النظام</button>
+        <button type="button" class="rep-btn whatsnew-btn" id="dashWhatsNewBtn">📣 الميزات الجديدة</button>
+        <button type="button" class="rep-btn update-btn" id="dashUpdateBtn">🔄 التحديثات</button>
+        <button type="button" class="rep-btn" id="dashReportBtn">📑 إنشاء تقرير عام</button>
+        <button type="button" class="money-eye" id="dashMoneyEye">👁️ إظهار المبالغ</button>
+      </div>
+    </div>
+
+    <!-- بطاقات اليوم -->
+    <section class="kpi-grid" id="dashKpi"></section>
+
+    <!-- شريط حالة الطلبات -->
+    <section class="panel status-panel">
+      <div class="panel-head"><h3>⏱️ حالة الطلبات (اليوم)</h3></div>
+      <div class="status-row" id="dashStatus"></div>
+    </section>
+
+    <div class="grid-2">
+      <section class="panel">
+        <div class="panel-head"><h3>💳 حسب طريقة الدفع</h3></div>
+        <div class="bars" id="dashPay"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h3>🚗 حسب نوع الطلب</h3></div>
+        <div class="bars" id="dashType"></div>
+      </section>
+    </div>
+
+    <!-- إيرادات آخر 7 أيام -->
+    <section class="panel">
+      <div class="panel-head"><h3>📈 إيرادات آخر 7 أيام</h3><span class="panel-note" id="dashWeekTotal">—</span></div>
+      <div class="chart7" id="dashChart7"></div>
+    </section>
+
+    <div class="grid-2">
+      <section class="panel">
+        <div class="panel-head"><h3>🏆 الأصناف الأكثر مبيعاً</h3></div>
+        <div class="toplist" id="dashTop"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h3>🏦 إيداعات/حوالات حسب الصراف</h3></div>
+        <div class="toplist" id="dashExch"></div>
+      </section>
+    </div>
+
+    <!-- أحدث الطلبات -->
+    <section class="panel">
+      <div class="panel-head"><h3>🧾 أحدث الطلبات</h3></div>
+      <div class="table-wrap">
+        <table class="dash-table">
+          <thead><tr><th>#</th><th>العميل</th><th>النوع</th><th>الدفع</th><th>الحالة</th><th>الإجمالي</th><th>الوقت</th></tr></thead>
+          <tbody id="dashRecentBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- تحليل بيانات Firebase -->
+    <section class="panel fb-panel">
+      <div class="panel-head">
+        <h3>☁️ تحليل بيانات Firebase</h3>
+        <span class="fb-note">القيم تقديرية محسوبة محلياً من محتوى المستندات</span>
+      </div>
+      <div class="fb-grid">
+        <div class="fb-card">
+          <div class="fb-card-head">
+            <h4>💾 المساحة حسب المجموعة</h4>
+            <span class="fb-total" id="dashStorageTotal">—</span>
+          </div>
+          <div id="dashStorage"></div>
+        </div>
+        <div class="fb-card">
+          <div class="fb-card-head"><h4>📈 حركة البيانات (السجلات المُنشأة)</h4></div>
+          <div id="dashActivity"></div>
+        </div>
+      </div>
+      <div class="fb-card">
+        <div class="fb-card-head"><h4>👥 المستخدمون حسب استخدام البيانات</h4></div>
+        <div id="dashUserData"></div>
+      </div>
+    </section>
+
+    <!-- استضافة Netlify (المساحة والاستهلاك) -->
+    <section class="panel nl-panel">
+      <div class="panel-head">
+        <h3>☁️ استضافة Netlify — المساحة والاستهلاك</h3>
+        <span class="panel-note" id="dashNlStatus">—</span>
+      </div>
+      <div id="dashNetlify"></div>
+    </section>
+
+    <footer class="dash-foot" id="dashFoot"></footer>
+  </div>
+</div>
+
+<!-- نافذة التقرير العام -->
+<div class="rep-overlay" id="repOverlay">
+  <div class="rep-modal">
+    <div class="rep-head">
+      <h3>📑 إنشاء تقرير عام</h3>
+      <button type="button" class="rep-close" id="repClose">✕</button>
+    </div>
+    <div class="rep-body">
+      <aside class="rep-side">
+        <div class="rep-field">
+          <label>الفترة الزمنية</label>
+          <select id="repRange">
+            <option value="all">كل الفترات</option>
+            <option value="today">اليوم</option>
+            <option value="7">آخر 7 أيام</option>
+            <option value="30">آخر 30 يوم</option>
+            <option value="custom">فترة مخصصة</option>
+          </select>
+        </div>
+        <div class="rep-field rep-custom" id="repCustomRange" style="display:none">
+          <label>من تاريخ</label>
+          <input type="date" id="repFrom" />
+          <label>إلى تاريخ</label>
+          <input type="date" id="repTo" />
+        </div>
+        <div class="rep-field">
+          <label>الأقسام المشمولة</label>
+          <div class="rep-checks" id="repChecks">
+            <label><input type="checkbox" value="overview" checked /> 📊 نظرة عامة (المؤشرات)</label>
+            <label><input type="checkbox" value="orders" checked /> 🧾 سجل الطلبات التفصيلي</label>
+            <label><input type="checkbox" value="items" checked /> 🍰 الأصناف المباعة</label>
+            <label><input type="checkbox" value="pay" checked /> 💳 طرق الدفع</label>
+            <label><input type="checkbox" value="cashiers" checked /> 👤 الكاشيرون (المبيعات)</label>
+            <label><input type="checkbox" value="customers" checked /> 🧾 العملاء والمتبقي</label>
+            <label><input type="checkbox" value="exchanges" checked /> 🏦 الإيداعات (الصرافون)</label>
+            <label><input type="checkbox" value="menu" checked /> 🍴 قائمة الأصناف والأسعار</label>
+            <label><input type="checkbox" value="users" checked /> 👥 مستخدمو النظام</label>
+            <label><input type="checkbox" value="storage" checked /> 💾 حركة وحجم البيانات</label>
+            <label><input type="checkbox" value="settings" checked /> ⚙️ إعدادات النظام</label>
+          </div>
+          <div class="rep-check-tools">
+            <button type="button" id="repSelectAll">✓ تحديد الكل</button>
+            <button type="button" id="repSelectNone">✕ إلغاء الكل</button>
+          </div>
+        </div>
+        <button type="button" class="rep-gen" id="repGen">🔄 تحديث التقرير</button>
+      </aside>
+      <div class="rep-preview" id="repPreview"></div>
+    </div>
+    <div class="rep-foot">
+      <span class="rep-note">الأرقام والأسماء تظهر كاملة في التقرير للطباعة (بغض النظر عن زر إخفاء المبالغ).</span>
+      <button type="button" class="rep-print" id="repPrint">🖨️ طباعة التقرير</button>
+    </div>
+  </div>
+</div>
+
+<!-- Printable receipt -->
+<div class="receipt" id="receipt"></div>
+
+<!-- Customers modal -->
+<div class="modal" id="custModal">
+  <div class="modal-box modal-wide">
+    <div class="modal-head">
+      <h3>🧾 العملاء والمتبقي</h3>
+      <button class="close-btn" id="closeCustModal">✕</button>
+    </div>
+    <div class="cust-modal-filter">
+      <button class="cmf-btn active" data-cf="all">الكل</button>
+      <button class="cmf-btn" data-cf="remaining">🔴 عليها متبقي</button>
+      <button class="cmf-btn" data-cf="paid">🟢 مسددة</button>
+    </div>
+    <div class="list-search"><input type="text" id="custSearch" placeholder="🔍 بحث (رقم الطلب، اسم، هاتف، صنف...)" /></div>
+    <div class="cust-modal-list" id="custModalList"></div>
+  </div>
+</div>
+
+<!-- Week orders board -->
+<style id="bmWeekGlowStyle">
+  /* إضاءة زرقاء تومض خلف الطلب الجديد في لوحة طلبات الأسبوع (مكتفية ذاتياً) */
+  @keyframes bmNewGlow{
+    0%{box-shadow:0 0 0 0 rgba(37,99,235,.65),0 0 18px 2px rgba(59,130,246,.55);border-color:#2563eb;}
+    50%{box-shadow:0 0 0 6px rgba(37,99,235,.10),0 0 26px 6px rgba(59,130,246,.85);border-color:#3b82f6;}
+    100%{box-shadow:0 0 0 0 rgba(37,99,235,.65),0 0 18px 2px rgba(59,130,246,.55);border-color:#2563eb;}
+  }
+  .week-card.bm-new-pulse{
+    animation:bmNewGlow 1.15s ease-in-out infinite;
+    border:2px solid #2563eb !important;
+    background:linear-gradient(180deg,#eff6ff 0%,#ffffff 60%) !important;
+    position:relative;z-index:2;
+  }
+  /* بعد انتهاء الوميض: يبقى تمييز أزرق ثابت حتى يقفل المستخدم اللوحة */
+  .week-card.bm-new-mark{
+    border:2px solid #3b82f6 !important;
+    background:linear-gradient(180deg,#eff6ff 0%,#ffffff 60%) !important;
+    box-shadow:0 0 0 3px rgba(59,130,246,.18);
+  }
+  .week-card.bm-new-pulse .wc-no::after,
+  .week-card.bm-new-mark .wc-no::after{
+    content:'جديد';margin-inline-start:7px;background:#2563eb;color:#fff;font-size:10px;
+    font-weight:800;padding:2px 7px;border-radius:99px;vertical-align:middle;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .week-card.bm-new-pulse{animation:none;}
+  }
+</style>
+<div class="modal week-modal" id="weekModal">
+  <div class="week-box">
+    <div class="modal-head">
+      <h3>📅 طلبات الأسبوع</h3>
+      <div class="week-nav">
+        <button class="wk-nav-btn" id="weekPrev">→ السابق</button>
+        <span class="wk-range" id="weekRange"></span>
+        <button class="wk-nav-btn" id="weekNext">التالي ←</button>
+        <button class="wk-nav-btn" id="weekToday">الأسبوع الحالي</button>
+        <button class="wk-nav-btn wk-mgr" id="weekMgrBtn">🔒 وضع المدير</button>
+      </div>
+      <button class="close-btn" id="closeWeekModal">✕</button>
+    </div>
+    <div class="list-search"><input type="text" id="weekSearch" placeholder="🔍 بحث في طلبات الأسبوع (رقم، اسم، صنف...)" /></div>
+    <div class="week-grid" id="weekGrid"></div>
+  </div>
+</div>
+
+<!-- Manager auth modal -->
+<div class="modal" id="mgrModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>🔐 دخول المدير</h3>
+      <button class="close-btn" id="closeMgrModal">✕</button>
+    </div>
+    <p class="mgr-note">حذف الطلبات متاح للمدير فقط. أدخل بيانات حساب المدير.</p>
+    <form id="mgrForm" class="mgr-form">
+      <label>اسم المستخدم<input type="text" id="mgrUser" autocomplete="off" /></label>
+      <label>كلمة المرور<input type="password" id="mgrPass" autocomplete="off" /></label>
+      <div class="mgr-err" id="mgrErr"></div>
+      <button type="submit" class="btn btn-primary btn-block">دخول</button>
+    </form>
+  </div>
+</div>
+
+<!-- نافذة اختيار تطبيق واتساب -->
+<div class="modal" id="waChooseModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>📲 إرسال عبر أي واتساب؟</h3>
+      <button class="close-btn" id="closeWaChoose">✕</button>
+    </div>
+    <div class="wa-choose-body">
+      <button class="wa-choose-btn" id="waPickNormal">🟢 واتساب العادي</button>
+      <button class="wa-choose-btn biz" id="waPickBusiness">💼 واتساب بزنس (Business)</button>
+      <small class="settings-hint">اختر التطبيق المثبّت على جهازك. إن لم يكن أحدهما مثبتاً سيفتح المتوفر تلقائياً.</small>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة اختيار الإيداع / الحوالة والصراف -->
+<div class="modal" id="depositModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>🏦 إيداع أو حوالة</h3>
+      <button class="close-btn" id="closeDepositModal">✕</button>
+    </div>
+    <div class="deposit-body">
+      <div class="deposit-type-row" id="depositTypeRow">
+        <button class="dep-type-btn active" data-dtype="إيداع">💰 إيداع</button>
+        <button class="dep-type-btn" data-dtype="حوالة">💸 حوالة</button>
+      </div>
+      <div class="deposit-exch-label">اختر الصراف</div>
+      <div class="deposit-exch-list" id="depositExchList"></div>
+      <button class="pay-print" id="depositConfirmBtn">✔ تأكيد</button>
+    </div>
+  </div>
+</div>
+
+<!-- Order details modal -->
+<div class="modal" id="orderDetailsModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>📋 تفاصيل الطلب</h3>
+      <button class="close-btn" id="closeDetailsModal">✕</button>
+    </div>
+    <div id="orderDetailsBody"></div>
+  </div>
+</div>
+
+<!-- نافذة ماسح كود QR -->
+<div class="modal" id="qrScanModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>📷 مسح QR</h3>
+      <button class="close-btn" id="closeQrScanModal">✕</button>
+    </div>
+    <div class="qr-scan-body">
+      <div class="qr-video-wrap">
+        <video id="qrVideo" playsinline muted></video>
+        <div class="qr-scan-frame"></div>
+        <div class="qr-scan-line"></div>
+      </div>
+      <div class="qr-scan-hint">وجّه الكاميرا نحو كود QR الموجود على الفاتورة</div>
+      <div class="qr-scan-status" id="qrScanStatus"></div>
+      <canvas id="qrCanvas" class="qr-scan-canvas"></canvas>
+      <button class="qr-scan-cancel" id="qrScanCancel">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة سجل الحركة (نشاط المستخدمين) -->
+<div class="modal" id="activityLogModal">
+  <div class="modal-box" style="max-width:640px">
+    <div class="modal-head">
+      <h3>📋 سجل الحركة</h3>
+      <button class="close-btn" id="closeActivityLog">✕</button>
+    </div>
+    <div class="log-toolbar">
+      <input type="text" id="logSearch" placeholder="🔍 بحث (اسم المستخدم / الحركة)" />
+      <select id="logUserFilter"><option value="">كل المستخدمين</option></select>
+      <button class="log-clear-btn" id="logClearBtn" title="مسح السجل">🗑️ مسح</button>
+    </div>
+    <div class="log-list" id="logList"><div class="log-empty">لا توجد حركات بعد</div></div>
+  </div>
+</div>
+
+<!-- شاشة طوارئ النظام (صيانة) — تُعرض لكل المستخدمين -->
+<div id="maintOverlay" class="maint-overlay">
+  <div class="maint-inner">
+    <div class="maint-icons">
+      <span>🛠️</span><span>⚙️</span><span>🔧</span>
+    </div>
+    <div class="maint-spinner"></div>
+    <h1 class="maint-title" id="maintTitle">النظام تحت الصيانة</h1>
+    <p class="maint-note" id="maintNote">نعتذر عن الإزعاج، نقوم حالياً بأعمال صيانة لتحسين الخدمة. سنعود قريباً.</p>
+    <button type="button" class="maint-exit" id="maintExitBtn" style="display:none">✖ إنهاء الصيانة (للمدير)</button>
+  </div>
+</div>
+
+<!-- نافذة تحكم طوارئ النظام (للمدير) -->
+<div class="modal" id="maintCtrlModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>🚨 طوارئ النظام</h3>
+      <button class="close-btn" id="closeMaintCtrl">✕</button>
+    </div>
+    <div style="padding:4px 2px">
+      <p style="font-size:13px;color:#64748b;line-height:1.8;margin:0 0 12px">عند التفعيل، تظهر شاشة زرقاء «النظام تحت الصيانة» لدى جميع المستخدمين على كل الأجهزة فوراً.</p>
+      <label class="signup-form" style="gap:6px;padding:0;font-size:13.5px;font-weight:800;color:#334155">عنوان الشاشة
+        <input type="text" id="maintTitleInput" placeholder="النظام تحت الصيانة" style="background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:11px 13px;font-family:inherit;font-size:14px;width:100%;box-sizing:border-box;margin-top:6px" />
+      </label>
+      <label class="signup-form" style="gap:6px;padding:10px 0 0;font-size:13.5px;font-weight:800;color:#334155">رسالة توضيحية
+        <textarea id="maintNoteInput" rows="3" placeholder="نعتذر عن الإزعاج..." style="background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:11px 13px;font-family:inherit;font-size:14px;width:100%;box-sizing:border-box;margin-top:6px;resize:vertical"></textarea>
+      </label>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button type="button" class="btn" id="maintActivateBtn" style="flex:1;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff">🚨 تفعيل الصيانة</button>
+        <button type="button" class="btn" id="maintDeactivateBtn" style="flex:1;background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff">✅ إيقاف الصيانة</button>
+      </div>
+      <div id="maintStatus" style="text-align:center;font-size:13px;font-weight:700;margin-top:12px;color:#64748b"></div>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة محرر الميزات الجديدة (للمدير) -->
+<div class="modal" id="whatsNewEditModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>📣 تحرير الميزات الجديدة</h3>
+      <button class="close-btn" id="closeWhatsNewEdit">✕</button>
+    </div>
+    <div style="padding:4px 2px">
+      <p style="font-size:13px;color:#64748b;line-height:1.8;margin:0 0 12px">اكتب الميزات الجديدة (سطر لكل ميزة). عند الحفظ، تُعرض لكل مستخدم مرة واحدة عند فتح التطبيق.</p>
+      <label class="signup-form" style="gap:6px;padding:0;font-size:13.5px;font-weight:800;color:#334155">عنوان (اختياري)
+        <input type="text" id="whatsNewTitleInput" placeholder="✨ ما الجديد؟" style="background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:11px 13px;font-family:inherit;font-size:14px;width:100%;box-sizing:border-box;margin-top:6px" />
+      </label>
+      <label class="signup-form" style="gap:6px;padding:10px 0 0;font-size:13.5px;font-weight:800;color:#334155">الميزات (سطر لكل ميزة)
+        <textarea id="whatsNewItemsInput" rows="6" placeholder="مثال:&#10;زر سجل الحركة الجديد&#10;تصغير حجم العرض لكل مستخدم" style="background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:11px 13px;font-family:inherit;font-size:14px;width:100%;box-sizing:border-box;margin-top:6px;resize:vertical;line-height:1.9"></textarea>
+      </label>
+      <button type="button" class="btn btn-primary btn-block" id="whatsNewSaveBtn" style="margin-top:16px">💾 حفظ وعرض للجميع</button>
+      <div id="whatsNewEditStatus" style="text-align:center;font-size:13px;font-weight:700;margin-top:12px;color:#64748b"></div>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة عرض الميزات الجديدة (تُعرض مرة واحدة لكل مستخدم) -->
+<div class="modal" id="whatsNewShowModal">
+  <div class="modal-box" style="max-width:460px">
+    <div class="whatsnew-hero">
+      <div class="whatsnew-hero-ic">✨</div>
+      <h3 id="whatsNewShowTitle">ما الجديد؟</h3>
+    </div>
+    <ul class="whatsnew-list" id="whatsNewShowList"></ul>
+    <button type="button" class="btn btn-primary btn-block" id="whatsNewGotIt" style="margin-top:8px">👍 رائع، فهمت</button>
+  </div>
+</div>
+
+<!-- نافذة تحكم التحديثات (للمدير): نشر تحديث فوري لكل الأجهزة -->
+<div class="modal" id="updateCtrlModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>🔄 التحديثات</h3>
+      <button class="close-btn" id="closeUpdateCtrl">✕</button>
+    </div>
+    <div style="padding:4px 2px">
+      <p style="font-size:13px;color:#64748b;line-height:1.8;margin:0 0 12px">بعد رفع ملفاتك الجديدة على الموقع، اضغط «نشر التحديث». سيظهر لكل المستخدمين إشعار «يتوفر تحديث»، وعند الضغط يُمسح الكاش وتُحمَّل أحدث نسخة فوراً.</p>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 14px;font-size:13px;color:#1e3a8a;font-weight:700;margin-bottom:12px">النسخة المنشورة حالياً: <span id="updateCurVer">0</span></div>
+      <label class="signup-form" style="gap:6px;padding:0;font-size:13.5px;font-weight:800;color:#334155">ملاحظة التحديث (اختياري)
+        <input type="text" id="updateNoteInput" placeholder="مثال: إضافة ميزة التحديثات" style="background:#f8fafc;border:2px solid #e2e8f0;border-radius:12px;padding:11px 13px;font-family:inherit;font-size:14px;width:100%;box-sizing:border-box;margin-top:6px" />
+      </label>
+      <button type="button" class="btn btn-block" id="updatePublishBtn" style="margin-top:16px;background:linear-gradient(135deg,#1b3fa8,#2563eb);color:#fff">📢 نشر التحديث للمستخدمين</button>
+      <button type="button" class="btn btn-block" id="updateSelfReloadBtn" style="margin-top:10px;background:#f1f5f9;color:#334155;border:2px solid #e2e8f0">♻️ تحديث جهازي الآن (مسح الكاش + إعادة تحميل)</button>
+      <div id="updateCtrlStatus" style="text-align:center;font-size:13px;font-weight:700;margin-top:12px;color:#64748b"></div>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة إشعار التحديث (تُعرض لكل مستخدم عند توفر نسخة جديدة) -->
+<div class="modal" id="updatePromptModal">
+  <div class="modal-box" style="max-width:440px">
+    <div class="update-hero">
+      <div class="update-hero-ic">🔄</div>
+      <h3>يتوفر تحديث جديد</h3>
+    </div>
+    <div style="padding:4px 18px 18px">
+      <p id="updatePromptNote" style="font-size:14px;color:#334155;line-height:1.9;text-align:center;margin:6px 0 4px">صدرت نسخة محدَّثة من النظام. اضغط «تحديث الآن» لتحميل أحدث الميزات.</p>
+      <button type="button" class="btn btn-block" id="updateNowBtn" style="margin-top:14px;background:linear-gradient(135deg,#1b3fa8,#2563eb);color:#fff">🚀 تحديث الآن</button>
+      <button type="button" class="btn btn-block" id="updateLaterBtn" style="margin-top:10px;background:transparent;color:#94a3b8;border:none">لاحقاً</button>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة تفاصيل الثيم -->
+<div class="modal" id="themeDetailModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>🎁 تفاصيل الثيم</h3>
+      <button class="close-btn" id="closeThemeModal">✕</button>
+    </div>
+    <div class="theme-detail-body">
+      <label class="td-label">المناسبة:</label>
+      <div class="occasion-btns" id="themeOccasionBtns"></div>
+      <input type="hidden" id="themeOccasion" value="" />
+      <label class="td-label">نص إضافي (حر):</label>
+      <input type="text" id="themeCustomText" placeholder="مثال: باسم فلان، عقبالكم..." maxlength="120" />
+      <button class="btn btn-primary" id="saveThemeBtn">✔ حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- خلفية معتمة خلف لوحة الطلب في الجوال -->
+<div class="ticket-backdrop" id="ticketBackdrop"></div>
+
+<!-- الشريط السفلي العائم (جوال فقط) -->
+<div class="mobile-bar" id="mobileBar">
+  <button class="mobile-cart-btn" id="mobileCartBtn" disabled>
+    <span class="mcb-count" id="mcbCount">0</span>
+    <span class="mcb-text">🛒 عرض الطلب والدفع</span>
+    <span class="mcb-total" id="mcbTotal">0</span>
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- نافذة الإشعارات -->
+<div class="modal notif-modal" id="notifModal">
+  <div class="notif-box">
+    <div class="notif-head">
+      <h3>🔔 الإشعارات</h3>
+      <div class="notif-head-actions">
+        <button class="sys-notif-btn" id="sysNotifBtn">🔔 تفعيل تنبيهات النظام</button>
+        <button class="notif-clear" id="notifClearBtn">🗑️ مسح الكل</button>
+        <button class="close-btn" id="closeNotifModal">✕</button>
+      </div>
+    </div>
+    <div class="notif-list" id="notifList">
+      <div class="notif-empty">لا توجد إشعارات</div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== استمارة عميل جديد: نافذة الطلبات (Hub) ====== -->
+<div class="cfm" id="acctReqModal">
+  <div class="cfm-box">
+    <div class="cfm-head">
+      <h3>🆕 طلبات الحساب (استمارات العملاء)</h3>
+      <button type="button" class="cfm-x" id="acctReqClose">✕</button>
+    </div>
+    <div class="cfm-body">
+      <button type="button" class="cfm-btn prim" id="newCustFormBtn">➕ استمارة عميل جديد</button>
+      <div class="cfm-list" id="acctReqList">
+        <div class="cfm-empty">لا توجد استمارات بعد</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== استمارة عميل جديد: نافذة النموذج + المعاينة ====== -->
+<div class="cfm" id="custFormModal">
+  <div class="cfm-box">
+    <div class="cfm-head">
+      <h3 id="custFormTitle">➕ استمارة عميل جديد</h3>
+      <button type="button" class="cfm-x" id="custFormClose">✕</button>
+    </div>
+    <div class="cfm-body" id="custFormBody"><!-- يُبنى ديناميكياً --></div>
+    <div class="cfm-foot" id="custFormFoot"><!-- أزرار ديناميكية --></div>
+  </div>
+</div>
+
+<!-- ====== استمارة طلب خارجية (رابط مؤقت): نافذة الإنشاء ====== -->
+<div class="cfm" id="extFormModal">
+  <div class="cfm-box">
+    <div class="cfm-head">
+      <h3>🔗 إنشاء استمارة طلب (رابط خارجي)</h3>
+      <button type="button" class="cfm-x" id="extFormClose">✕</button>
+    </div>
+    <div class="cfm-body">
+      <div class="cfm-sec">
+        <h4>➕ إنشاء استمارة جديدة</h4>
+        <div class="cfm-field"><label>عنوان الاستمارة (اختياري)</label><input class="cfm-input" id="extTitle" maxlength="60" placeholder="مثال: طلبات الجمعة"></div>
+        <div class="cfm-field"><label>ملاحظة تظهر للعميل (اختياري)</label><input class="cfm-input" id="extNote" maxlength="120" placeholder="مثال: الرجاء تحديد موعد الاستلام"></div>
+        <div class="cfm-field"><label>مدة صلاحية الرابط (ساعات)</label><input type="number" class="cfm-input" id="extHours" min="1" max="168" value="24"></div>
+        <button type="button" class="cfm-btn ok" id="extCreateBtn" style="width:100%">🔗 إنشاء الرابط</button>
+      </div>
+      <div class="cfm-sec">
+        <h4>📋 استماراتي وروابطها</h4>
+        <div class="cfm-list" id="extFormList"><div class="cfm-empty">لا توجد استمارات بعد</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== استمارة طلب خارجية: نافذة معاينة طلب العميل ====== -->
+<div class="cfm" id="extPreviewModal">
+  <div class="cfm-box">
+    <div class="cfm-head">
+      <h3>👁️ معاينة طلب العميل</h3>
+      <button type="button" class="cfm-x" id="extPrevClose">✕</button>
+    </div>
+    <div class="cfm-body" id="extPrevBody"></div>
+    <div class="cfm-foot" id="extPrevFoot"></div>
+  </div>
+</div>
+
+<!-- ====== استمارة عميل جديد: أنماط مستقلة ====== -->
+<style id="custFormStyle">
+  .acctreq-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;
+    padding:0 5px;margin-inline-start:6px;border-radius:9px;background:#ef4444;color:#fff;font-size:11px;font-weight:800;line-height:1;}
+  .cfm{position:fixed;inset:0;z-index:100000;display:none;align-items:center;justify-content:center;
+    background:rgba(15,23,42,.42);backdrop-filter:blur(6px);padding:14px;}
+  .cfm.show{display:flex;}
+  .cfm-box{background:#fff;color:#0f172a;width:100%;max-width:540px;max-height:92vh;overflow:auto;
+    border:1px solid #eef1f7;border-radius:24px;
+    box-shadow:0 32px 80px -28px rgba(21,42,102,.5),0 6px 20px -10px rgba(21,42,102,.14);
+    display:flex;flex-direction:column;}
+  .cfm-head{position:sticky;top:0;background:#fff;color:#152a66;padding:20px 20px 15px;display:flex;
+    align-items:center;justify-content:space-between;gap:8px;border-radius:24px 24px 0 0;z-index:2;
+    border-bottom:1px solid #eef2f9;}
+  .cfm-head::after{content:'';position:absolute;left:20px;right:20px;bottom:-1px;height:3px;border-radius:3px;
+    background:linear-gradient(90deg,#1e4ed0 0%,#60a5fa 45%,#ff85b0 100%);}
+  .cfm-head h3{margin:0;font-size:17.5px;font-weight:800;letter-spacing:-.2px;color:#152a66;}
+  .cfm-x{background:#f1f5fb;border:1px solid #e6ebf4;color:#64748b;width:34px;height:34px;border-radius:11px;
+    font-size:15px;cursor:pointer;line-height:1;transition:all .15s;}
+  .cfm-x:hover{background:#ffe9f1;color:#e23b78;border-color:#ffd3e2;}
+  .cfm-body{padding:18px;display:flex;flex-direction:column;gap:16px;background:#fff;}
+  .cfm-sec{border:1px solid #eef1f7;border-radius:18px;padding:16px;background:#fff;
+    box-shadow:0 10px 26px -20px rgba(21,42,102,.4);}
+  .cfm-sec h4{margin:0 0 13px;font-size:14.5px;font-weight:800;color:#152a66;display:flex;align-items:center;gap:6px;}
+  .cfm-field{display:flex;flex-direction:column;gap:7px;margin-bottom:13px;}
+  .cfm-field:last-child{margin-bottom:0;}
+  .cfm-field label{font-size:13px;font-weight:800;color:#334155;}
+  .cfm-field .req{color:#ff4d8d;}
+  .cfm-input{width:100%;padding:13px 14px;border:1.6px solid #e2e8f3;border-radius:13px;font-family:inherit;
+    font-size:15px;font-weight:600;color:#0f172a;background:#fbfcff;box-sizing:border-box;
+    transition:border-color .18s,background .18s,box-shadow .18s;}
+  .cfm-input::placeholder{color:#9aa6bd;font-weight:500;}
+  .cfm-input:hover{border-color:#cfdcf7;}
+  .cfm-input:focus{outline:none;border-color:#1e4ed0;background:#fff;color:#0b1f52;
+    box-shadow:0 0 0 4px rgba(30,78,208,.15),0 8px 18px -12px rgba(30,78,208,.5);}
+  .cfm-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .cfm-chip{flex:1;min-width:120px;padding:11px;border:1.6px solid #e2e8f3;border-radius:13px;background:#fbfcff;
+    font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;text-align:center;color:#334155;transition:all .16s;}
+  .cfm-chip:hover{border-color:#cfdcf7;}
+  .cfm-chip.on{border-color:#1e4ed0;background:#eef3fe;color:#1b3fa8;box-shadow:0 8px 18px -12px rgba(30,78,208,.6);}
+  .cfm-items{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto;}
+  .cfm-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:10px;}
+  .cfm-item.sel{border-color:#2563eb;background:#eff6ff;}
+  .cfm-item .ci-emo{font-size:20px;}
+  .cfm-item .ci-info{flex:1;min-width:0;}
+  .cfm-item .ci-name{font-size:13px;font-weight:700;}
+  .cfm-item .ci-price{font-size:12px;color:#64748b;}
+  .cfm-step{display:flex;align-items:center;gap:6px;}
+  .cfm-step button{width:30px;height:30px;border:0;border-radius:8px;background:#e2e8f0;font-size:17px;
+    font-weight:800;cursor:pointer;line-height:1;color:#1e293b;}
+  .cfm-step button.plus{background:#2563eb;color:#fff;}
+  .cfm-step .q{min-width:26px;text-align:center;font-weight:800;font-size:14px;}
+  .cfm-check{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:#334155;cursor:pointer;}
+  .cfm-check input{width:18px;height:18px;}
+  .cfm-foot{position:sticky;bottom:0;background:#fff;border-top:1px solid #eef2f9;padding:14px 18px;
+    display:flex;gap:10px;border-radius:0 0 24px 24px;}
+  .cfm-btn{flex:1;padding:14px;border:0;border-radius:14px;font-family:inherit;font-size:14.5px;font-weight:800;
+    cursor:pointer;transition:transform .12s,filter .15s;}
+  .cfm-btn:active{transform:translateY(1px);}
+  .cfm-btn.prim{background:linear-gradient(135deg,#1b3fa8,#1e4ed0 60%,#3b82f6);color:#fff;box-shadow:0 14px 26px -14px rgba(30,78,208,.75);}
+  .cfm-btn.ok{background:linear-gradient(135deg,#15803d,#16a34a 60%,#22c55e);color:#fff;box-shadow:0 14px 26px -14px rgba(22,163,74,.7);}
+  .cfm-btn.ghost{background:#f3f6fc;color:#334155;border:1px solid #e6ebf4;}
+  .cfm-btn.danger{background:#fff1f3;color:#e11d48;border:1px solid #ffd9e1;}
+  .cfm-preview{background:#f8fafc;border:1px dashed #94a3b8;border-radius:12px;padding:14px;font-size:13px;line-height:1.9;}
+  .cfm-preview b{color:#1e293b;}
+  .cfm-prev-row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dotted #e2e8f0;}
+  .cfm-prev-total{font-weight:800;color:#16a34a;font-size:15px;margin-top:6px;}
+  .cfm-list{display:flex;flex-direction:column;gap:10px;}
+  .cfm-card{border:1px solid #eef1f7;border-radius:16px;padding:14px;background:#fff;
+    box-shadow:0 10px 26px -22px rgba(21,42,102,.45);}
+  .cfm-card.expired{opacity:.6;}
+  .cfm-card .cc-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;}
+  .cfm-card .cc-name{font-weight:800;font-size:14px;}
+  .cfm-tag{font-size:11px;font-weight:800;padding:3px 8px;border-radius:20px;}
+  .cfm-tag.pending{background:#fef3c7;color:#92400e;}
+  .cfm-tag.approved{background:#dcfce7;color:#166534;}
+  .cfm-tag.expired{background:#fee2e2;color:#991b1b;}
+  .cfm-card .cc-meta{font-size:12px;color:#64748b;line-height:1.8;}
+  .cfm-countdown{font-weight:800;color:#2563eb;}
+  .cfm-card .cc-acts{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+  .cfm-sm{padding:8px 12px;border:0;border-radius:9px;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;}
+  .cfm-empty{text-align:center;color:#94a3b8;padding:34px 14px;font-size:14px;font-weight:600;
+    background:#fafbfe;border:1px dashed #e2e8f3;border-radius:14px;}
+  /* الحفاظ على خلفية بيضاء أنيقة حتى في الوضع الداكن */
+  @media (prefers-color-scheme:dark){
+    .cfm-box,.cfm-head,.cfm-body,.cfm-sec,.cfm-foot,.cfm-card{background:#fff;color:#0f172a;}
+    .cfm-sec,.cfm-card{border-color:#eef1f7;}
+    .cfm-sec h4,.cfm-field label,.cfm-check{color:#334155;}
+    .cfm-input{background:#fbfcff;border-color:#e2e8f3;color:#0f172a;}
+    .cfm-item{border-color:#eef1f7;}
+    .cfm-preview{background:#fafbfe;}
+    .cfm-btn.ghost{background:#f3f6fc;color:#334155;}
+  }
+  .ext-link-box{display:flex;gap:6px;margin-top:8px;align-items:stretch;}
+  .ext-link-box input{flex:1;min-width:0;padding:10px;border:1.4px solid #e2e8f3;border-radius:11px;
+    font-size:12px;background:#fbfcff;direction:ltr;color:#0f172a;font-weight:600;}
+  .ext-link-box button{border:0;border-radius:11px;padding:0 14px;font-family:inherit;font-weight:800;
+    font-size:12.5px;cursor:pointer;background:linear-gradient(135deg,#1b3fa8,#1e4ed0);color:#fff;white-space:nowrap;}
+  .ext-link-box button.wa{background:linear-gradient(135deg,#15803d,#16a34a);}
+  .notif-acts{display:flex;gap:6px;margin-top:8px;}
+  .notif-act{border:0;border-radius:8px;padding:7px 12px;font-family:inherit;font-size:12.5px;
+    font-weight:800;cursor:pointer;}
+  .notif-act.prev{background:#e0e7ff;color:#3730a3;}
+  .notif-act.appr{background:#16a34a;color:#fff;}
+</style>
+
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="db.js"></script>
+<script src="qrcode.js"></script>
+<script src="jsqr.js"></script>
+<script src="biometric.js"></script>
+<script src="native-bio.js"></script>
+<script src="app.js"></script>
+<script src="features.js"></script>
+<script src="dashboard.js"></script>
+<script src="mobile.js"></script>
+<script src="tasks.js"></script>
+<script>
+/* شاشة الترحيب: تظهر عند كل فتح للنظام ثم تختفي تلقائياً، أو عند لمس الشاشة */
+(function(){
+  var sp=document.getElementById('bmSplash');
+  if(!sp)return;
+  function hide(){
+    sp.classList.add('bm-hide');
+    setTimeout(function(){ if(sp){ sp.style.display='none'; } },700);
+  }
+  sp.addEventListener('click',hide);
+  setTimeout(hide,2800);
+})();
+
+/* تحديث تلقائي: يجبر الـPWA على تحميل أحدث نسخة ويتجنّب عرض نسخة قديمة محفوظة */
+(function(){
+  if(!('serviceWorker' in navigator)) return;
+  var reloaded=false;
+  navigator.serviceWorker.addEventListener('controllerchange',function(){
+    if(reloaded) return; reloaded=true; window.location.reload();
+  });
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(reg){
+      try{ reg.update(); }catch(e){}
+      if(reg.waiting){ try{ reg.waiting.postMessage({type:'SKIP_WAITING'}); }catch(e){} }
+      reg.addEventListener('updatefound',function(){
+        var nw=reg.installing;
+        if(!nw) return;
+        nw.addEventListener('statechange',function(){
+          if(nw.state==='installed' && navigator.serviceWorker.controller){
+            try{ nw.postMessage({type:'SKIP_WAITING'}); }catch(e){}
+          }
+        });
+      });
+    });
+  }).catch(function(){});
+})();
+</script>
+<!-- زر تثبيت التطبيق (PWA) — يظهر تلقائياً على أجهزة الأندرويد -->
+<style>
+  .pwa-install{position:fixed;z-index:99998;left:16px;bottom:calc(16px + env(safe-area-inset-bottom));
+    display:none;align-items:center;gap:9px;padding:12px 18px;border:0;border-radius:999px;cursor:pointer;
+    font-family:'Cairo',system-ui,sans-serif;font-size:14.5px;font-weight:800;color:#fff;
+    background:linear-gradient(135deg,#1b3fa8,#1e4ed0 60%,#3b82f6);
+    box-shadow:0 16px 34px -12px rgba(30,78,208,.75);animation:pwaPop .5s cubic-bezier(.18,1.2,.4,1) both;}
+  .pwa-install.show{display:inline-flex;}
+  .pwa-install:active{transform:translateY(1px);}
+  .pwa-install .pi-ico{font-size:17px;}
+  @keyframes pwaPop{from{opacity:0;transform:translateY(16px) scale(.9);}to{opacity:1;transform:none;}}
+</style>
+<button type="button" class="pwa-install" id="pwaInstallBtn"><span class="pi-ico">⬇️</span> تثبيت التطبيق</button>
+<script>
+/* تثبيت التطبيق على الأندرويد (Add to Home Screen) */
+(function(){
+  var btn=document.getElementById('pwaInstallBtn');
+  if(!btn) return;
+  var deferred=null;
+  // إذا كان التطبيق مثبّتاً ويعمل بوضع مستقل، لا تظهر الزر
+  function isStandalone(){
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  }
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferred=e;
+    if(!isStandalone()) btn.classList.add('show');
+  });
+  btn.addEventListener('click', function(){
+    if(!deferred){
+      if(typeof showToast==='function') showToast('لفتح التثبيت: افتح قائمة المتصفّح واختر «إضافة إلى الشاشة الرئيسية»');
+      return;
+    }
+    deferred.prompt();
+    deferred.userChoice.then(function(){ deferred=null; btn.classList.remove('show'); });
+  });
+  window.addEventListener('appinstalled', function(){
+    btn.classList.remove('show'); deferred=null;
+    if(typeof showToast==='function') showToast('✅ تمّ تثبيت التطبيق بنجاح');
+  });
+})();
+</script>
+<script>
+/* ضمان ظهور أي نافذة/قائمة جديدة دائماً في الأمام (أعلى z-index) */
+(function(){
+  var topZ = 8100;
+  function bump(el){
+    if(el && el.classList && el.classList.contains('modal') && el.classList.contains('show')){
+      topZ += 1; el.style.zIndex = String(topZ);
+    }
+  }
+  try{
+    var mo = new MutationObserver(function(muts){
+      for(var i=0;i<muts.length;i++){
+        var m = muts[i];
+        if(m.type==='attributes' && m.attributeName==='class') bump(m.target);
+      }
+    });
+    document.querySelectorAll('.modal').forEach(function(el){
+      mo.observe(el, {attributes:true, attributeFilter:['class']});
+    });
+  }catch(e){}
+})();
+</script>
+</body>
+</html>
