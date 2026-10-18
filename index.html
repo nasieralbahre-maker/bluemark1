@@ -394,6 +394,7 @@
     <button class="brand-switch new-order" id="dashToCashier" style="display:none">➕ كاشير</button>
     <button class="brand-switch to-dash" id="dashLink" style="display:none">📊 لوحة</button>
     <button class="brand-switch qr-scan-btn" id="qrScanBtn" style="display:none">📷 مسح QR</button>
+    <button class="brand-switch upgrade-btn" id="upgradeCenterBtn" style="display:none">⬆️ ترقية</button>
     <button class="brand-switch log-btn" id="activityLogBtn" style="display:none">📋 السجل</button>
   </div>
   <div class="head-right">
@@ -797,6 +798,72 @@
   </div>
 </div>
 
+<!-- ===== مركز التحديث والترقية (يتجاوز الإعدادات) ===== -->
+<div class="modal" id="upgradeModal">
+  <div class="modal-box upg-box">
+    <div class="modal-head">
+      <h3>⬆️ التحديث والترقية</h3>
+      <button class="close-btn" id="upgradeClose">✕</button>
+    </div>
+
+    <!-- التبويبان: المستخدمون / المدير العام -->
+    <div class="upg-tabs" id="upgradeTabs">
+      <button type="button" class="upg-tab active" data-upg-tab="user">
+        <span class="upg-tab-ico">👥</span>
+        <span class="upg-tab-lbl">المستخدمون</span>
+        <span class="upg-tab-badge" id="upgradeUserBadge" style="display:none">0</span>
+      </button>
+      <button type="button" class="upg-tab" data-upg-tab="admin" id="upgradeAdminTab" style="display:none">
+        <span class="upg-tab-ico">🛠️</span>
+        <span class="upg-tab-lbl">المدير العام</span>
+      </button>
+    </div>
+
+    <!-- ===== خانة المستخدمين ===== -->
+    <div class="upg-pane" id="upgradePaneUser">
+      <div class="upg-hint" id="upgradeUserHint">النسخة الجديدة المتاحة للتنزيل داخل التطبيق</div>
+      <div class="upg-list" id="upgradeUserList"></div>
+    </div>
+
+    <!-- ===== خانة المدير العام ===== -->
+    <div class="upg-pane" id="upgradePaneAdmin" style="display:none">
+      <div class="upg-hint">أنشئ تحديثاً جديداً: ضع رابط التحميل المباشر واسم النسخة</div>
+      <div class="upg-form">
+        <div class="upg-field">
+          <label for="upgradeVerName">اسم النسخة</label>
+          <input type="text" id="upgradeVerName" placeholder="مثال: BMS-SY 1.1.0" maxlength="60" />
+        </div>
+        <div class="upg-field">
+          <label for="upgradeUrl">رابط التحميل المباشر</label>
+          <input type="url" id="upgradeUrl" placeholder="https://.../BMS-SY-1.1.0.exe" maxlength="500" />
+        </div>
+        <div class="upg-field">
+          <label for="upgradeNote">ملاحظة (اختياري)</label>
+          <input type="text" id="upgradeNote" placeholder="مثال: إصلاح مشكلة الطباعة" maxlength="120" />
+        </div>
+        <div class="upg-form-actions">
+          <button type="button" class="upg-btn upg-btn-clear" id="upgradeReset">🗑️ تفريغ</button>
+          <button type="button" class="upg-btn upg-btn-create" id="upgradeCreate">➕ إنشاء تحديث</button>
+        </div>
+        <div class="upg-status" id="upgradeStatus"></div>
+      </div>
+      <div class="upg-subhead">التحديثات المنشورة</div>
+      <div class="upg-list" id="upgradeAdminList"></div>
+    </div>
+
+    <!-- ===== شريط تقدّم التنزيل ===== -->
+    <div class="upg-prog" id="upgradeProgress" style="display:none">
+      <div class="upg-prog-head">
+        <span class="upg-prog-name" id="upgradeProgName">—</span>
+        <span class="upg-prog-pct" id="upgradeProgPct">0%</span>
+      </div>
+      <div class="upg-prog-track"><div class="upg-prog-fill" id="upgradeProgFill"></div></div>
+      <div class="upg-prog-sub" id="upgradeProgSub">جارٍ التحضير... (0 KB)</div>
+      <button type="button" class="upg-btn upg-btn-cancel" id="upgradeCancel">✕ إلغاء التنزيل</button>
+    </div>
+  </div>
+</div>
+
 <!-- نافذة سجل الحركة (نشاط المستخدمين) -->
 <div class="modal" id="activityLogModal">
   <div class="modal-box" style="max-width:640px">
@@ -1145,11 +1212,13 @@
 <script src="jsqr.js"></script>
 <script src="biometric.js"></script>
 <script src="native-bio.js"></script>
+<script src="printer.js"></script>
 <script src="app.js"></script>
 <script src="features.js"></script>
 <script src="dashboard.js"></script>
 <script src="mobile.js"></script>
 <script src="tasks.js"></script>
+<script src="updater.js"></script>
 <script>
 /* شاشة الترحيب: تظهر عند كل فتح للنظام ثم تختفي تلقائياً، أو عند لمس الشاشة */
 (function(){

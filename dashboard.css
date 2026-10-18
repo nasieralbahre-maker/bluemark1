@@ -170,6 +170,20 @@
 .brand-switch.new-order{background:linear-gradient(120deg,#16a34a,#22c55e);box-shadow:0 8px 18px -8px rgba(22,163,74,.7);}
 .brand-switch.to-dash{background:linear-gradient(120deg,#1d4ed8,#3b82f6);box-shadow:0 8px 18px -8px rgba(37,99,235,.7);}
 .brand-switch.log-btn{background:linear-gradient(120deg,#ea580c,#f97316);box-shadow:0 8px 18px -8px rgba(234,88,12,.7);}
+/* زر التحديث والترقية — أزرق بارز (مميّز) */
+.brand-switch.upgrade-btn{
+  background:linear-gradient(120deg,#1e3af5,#0ea5e9 55%,#06b6d4);
+  box-shadow:0 8px 20px -6px rgba(14,116,244,.85),0 0 0 2px rgba(186,230,253,.55);
+  color:#fff;font-weight:800;
+}
+.brand-switch.upgrade-btn:hover{
+  filter:brightness(1.12) saturate(1.1);
+  box-shadow:0 10px 26px -6px rgba(14,116,244,.95),0 0 0 3px rgba(186,230,253,.8);
+}
+.brand-switch.upgrade-btn .upg-btn-dot{
+  background:linear-gradient(135deg,#ff2d55,#ff7a45);
+  box-shadow:0 0 0 2px rgba(255,255,255,.85),0 2px 8px rgba(255,45,85,.8);
+}
 
 /* نافذة سجل الحركة */
 .log-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;}

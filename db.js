@@ -95,6 +95,8 @@ const DB = (function(){
     whatsNew: { ver:0, title:'', items:[] },
     // ----- التحديثات (نشر تحديث فوري لكل الأجهزة: يمسح الكاش ويعيد التحميل) -----
     appUpdate: { ver:0, note:'', ts:0 },
+    // ----- حزم الترقية القابلة للتنزيل (ينشئها المدير: اسم نسخة + رابط مباشر) -----
+    updates: [],   // [{ id, name, url, note, size, ts }]
     // ----- استضافة Netlify (اختياري) -----
     netlifyToken: '',     // رمز وصول شخصي من Netlify (Personal Access Token)
     netlifySlug: '',      // اسم الحساب (Account slug) لجلب استهلاك الباقة
@@ -222,6 +224,20 @@ const DB = (function(){
       note: (auIn.note != null ? auIn.note : DEFAULT_SETTINGS.appUpdate.note),
       ts: (auIn.ts != null ? auIn.ts : DEFAULT_SETTINGS.appUpdate.ts)
     };
+    // حزم الترقية القابلة للتنزيل — نقبل العناصر الصالحة فقط (اسم + رابط)
+    var upsIn = (s && Array.isArray(s.updates)) ? s.updates : [];
+    out.updates = upsIn.filter(function(u){
+      return u && typeof u === 'object' && String(u.name || '').trim() && String(u.url || '').trim();
+    }).slice(0, 50).map(function(u){
+      return {
+        id:    (u.id != null ? String(u.id) : ('u' + Date.now() + Math.random().toString(36).slice(2, 7))),
+        name:  String(u.name).trim(),
+        url:   String(u.url).trim(),
+        note:  String(u.note || '').trim(),
+        size:  (u.size != null ? u.size : 0),
+        ts:    (u.ts != null ? u.ts : Date.now())
+      };
+    });
     return out;
   }
   function lsSettings(){

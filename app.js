@@ -67,13 +67,26 @@ function applyPrintStyle(){
 // في المتصفح العادي نعود إلى window.print() كالمعتاد.
 function nativePrint(){
   try{ if(typeof logActivity==='function') logActivity('print', 'طباعة فاتورة'); }catch(e){}
+  var cfg = null;
+  try{ if(window.BMSPrinter && typeof BMSPrinter.load==='function') cfg = BMSPrinter.load(); }catch(e){}
   try{
-    if(window.AndroidPrint && typeof window.AndroidPrint.print === 'function'){
-      window.AndroidPrint.print();
-      return;
+    var A = window.AndroidPrint;
+    if(A){
+      if(cfg){
+        var opt = { printer: cfg.defaultPrinter||'', copies: cfg.copies||1,
+                    silent: cfg.silent===true, autoCut: cfg.autoCut!==false,
+                    cashDrawer: cfg.cashDrawer===true, feedLines: cfg.feedLines||0, width: cfg.paperWidth };
+        if(cfg.silent===true && typeof A.printSilent==='function'){ A.printSilent(JSON.stringify(opt)); return; }
+        if(typeof A.printWith==='function'){ A.printWith(JSON.stringify(opt)); return; }
+      }
+      if(typeof A.print === 'function'){ A.print(); return; }
     }
   }catch(e){}
-  try{ window.print(); }catch(e){}
+  // المتصفّح: window.print() دائماً يعرض نافذة الطباعة (قيد المتصفّح)؛ نحترم عدد النسخ إن أمكن
+  try{
+    var n = cfg ? Math.max(1, parseInt(cfg.copies,10)||1) : 1;
+    (function loop(i){ if(i<=0) return; window.print(); if(i>1) setTimeout(function(){ loop(i-1); }, 400); })(n);
+  }catch(e){ try{ window.print(); }catch(_){} }
 }
 
 // ===== سجل الحركة (ACTIVITY LOG) =====
@@ -789,29 +802,32 @@ function printReceipt(order){
   const inv = RESTAURANT.invoice || {};
   const rows = order.items.map(it =>
     '<tr><td>' + esc(it.name) + '</td>' +
-    '<td class="c">' + it.qty + '</td>' +
-    '<td class="l">' + money(it.price*it.qty) + '</td></tr>'
+    '<td class="c rf-qty">' + it.qty + '</td>' +
+    '<td class="l rf-price">' + money(it.price*it.qty) + '</td></tr>'
   ).join('');
+  // إعدادات الطابعة المحلية (خاصة بالجهاز) — توقيع/عبارة شكر اختيارية
+  const pcfg = (window.BMSPrinter && typeof BMSPrinter.load==='function') ? BMSPrinter.load() : null;
 
   // ===== كتل الفاتورة (قابلة لإعادة الترتيب والإخفاء من لوحة التحكم) =====
   const blocks = {};
   blocks.header =
     '<div class="r-center">' +
       ((inv.showLogo !== false) && RESTAURANT.logo ? '<img class="r-logo" src="' + esc(RESTAURANT.logo) + '" alt="" />' : '') +
-      '<h2>' + esc(RESTAURANT.headerBrand || RESTAURANT.name) + '</h2>' +
-      ((inv.showTagline !== false) && RESTAURANT.headerTagline ? '<div class="r-tagline">' + esc(RESTAURANT.headerTagline) + '</div>' : '') +
-      ((inv.showAddress !== false) ? '<div class="r-sub">' + esc(RESTAURANT.address) + '</div>' : '') +
-      ((inv.showPhone !== false) ? '<div class="r-sub">هاتف: ' + esc(RESTAURANT.phone) + '</div>' : '') +
-      (showVat && RESTAURANT.vatNo ? '<div class="r-sub">الرقم الضريبي: ' + esc(RESTAURANT.vatNo) + '</div>' : '') +
+      '<h2 class="rf-name">' + esc(RESTAURANT.headerBrand || RESTAURANT.name) + '</h2>' +
+      ((inv.showTagline !== false) && RESTAURANT.headerTagline ? '<div class="r-tagline rf-estab">' + esc(RESTAURANT.headerTagline) + '</div>' : '') +
+      ((inv.showAddress !== false) ? '<div class="r-sub rf-estab">' + esc(RESTAURANT.address) + '</div>' : '') +
+      ((inv.showPhone !== false) ? '<div class="r-sub rf-estab">هاتف: ' + esc(RESTAURANT.phone) + '</div>' : '') +
+      (showVat && RESTAURANT.vatNo ? '<div class="r-sub rf-estab">الرقم الضريبي: ' + esc(RESTAURANT.vatNo) + '</div>' : '') +
     '</div>' +
     '<div class="r-line"></div>';
   blocks.meta =
     '<div class="r-meta">' +
       '<div>' + (showVat ? 'فاتورة ضريبية مبسطة' : 'فاتورة') + '</div>' +
-      '<div>رقم الطلب: ' + esc(orderNoLabel(order)) + '</div>' +
-      '<div>التاريخ: ' + esc(order.date) + '</div>' +
-      '<div>النوع: ' + esc(order.type) + ' · العميل: ' + esc(order.name) + '</div>' +
-      (order.phone ? '<div>الجوال: ' + esc(order.phone) + '</div>' : '') +
+      '<div class="rf-invno">رقم الطلب: ' + esc(orderNoLabel(order)) + '</div>' +
+      '<div class="rf-date">التاريخ: ' + esc(order.date) + '</div>' +
+      '<div>النوع: ' + esc(order.type) + '</div>' +
+      '<div class="rf-customer">العميل: ' + esc(order.name) + '</div>' +
+      (order.phone ? '<div class="rf-phone">الجوال: ' + esc(order.phone) + '</div>' : '') +
       ((inv.showPickup !== false) && pickupLabel(order) ? '<div>موعد الاستلام: ' + esc(pickupLabel(order)) + '</div>' : '') +
       customFields.map(f => (f && (f.label || f.value)) ? '<div>' + esc(f.label || '') + (f.label && f.value ? ': ' : '') + esc(f.value || '') + '</div>' : '').join('') +
       ((inv.showTheme !== false) && order.theme ? '<div>🎁 الطلب: مع ثيم</div>' : '') +
@@ -822,34 +838,37 @@ function printReceipt(order){
     '</div>' +
     '<div class="r-line"></div>';
   blocks.items =
-    '<table><thead><tr><th>الصنف</th><th class="c">كمية</th><th class="l">المبلغ</th></tr></thead>' +
+    '<table class="rf-items"><thead><tr><th>الصنف</th><th class="c rf-qty">كمية</th><th class="l rf-price">المبلغ</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>' +
     '<div class="r-line"></div>';
   blocks.totals =
     (showVat ? '<div class="r-tot"><span>المجموع الفرعي</span><span>' + money(order.subtotal) + '</span></div>' : '') +
     (showVat ? '<div class="r-tot"><span>ضريبة القيمة المضافة (' + Math.round(RESTAURANT.vatRate*100) + '%)</span><span>' + money(order.vat) + '</span></div>' : '') +
-    '<div class="r-tot big"><span>الإجمالي</span><span>' + money(order.total) + '</span></div>' +
+    ((Number(order.discount)||0) > 0 ? '<div class="r-tot rf-discount"><span>الخصم</span><span>' + money(order.discount) + '</span></div>' : '') +
+    '<div class="r-tot big rf-total"><span>الإجمالي</span><span>' + money(order.total) + '</span></div>' +
     '<div class="r-line"></div>';
   blocks.payment =
     '<div class="r-tot"><span>طريقة الدفع</span><span>' + payTxt + '</span></div>' +
     ((order.pay === 'cash' || order.pay === 'deposit')
-      ? '<div class="r-tot"><span>' + (order.pay === 'deposit' ? 'العربون المدفوع' : 'المدفوع') + '</span><span>' + money(order.paid) + '</span></div>' +
+      ? '<div class="r-tot rf-paid"><span>' + (order.pay === 'deposit' ? 'العربون المدفوع' : 'المدفوع') + '</span><span>' + money(order.paid) + '</span></div>' +
         (order.change > 0 ? '<div class="r-tot"><span>الباقي</span><span>' + money(order.change) + '</span></div>' : '')
       : '') +
     (hasRemain
-      ? '<div class="r-tot big remain"><span>المتبقي على العميل</span><span>' + money(order.remaining) + '</span></div>'
+      ? '<div class="r-tot big remain rf-remaining"><span>المتبقي على العميل</span><span>' + money(order.remaining) + '</span></div>'
       : '');
   blocks.footer =
     ((inv.showFooter !== false) ? '<div class="r-foot">' + esc(RESTAURANT.footer || '') + '<br/>' + (hasRemain ? 'يرجى الاحتفاظ بالفاتورة لسداد المتبقي' : 'نتمنى لكم وجبة شهية') + '</div>' : '') +
     ((inv.showCashier !== false) && order.cashier ? '<div class="r-user">المستخدم: ' + esc(order.cashier) + '</div>' : '') +
+    ((pcfg && pcfg.show && pcfg.show.thankYou!==false && pcfg.thankYouText) ? '<div class="r-foot rf-thanks">' + esc(pcfg.thankYouText) + '</div>' : '') +
+    ((pcfg && pcfg.show && pcfg.show.signature===true && pcfg.signatureText) ? '<div class="r-user rf-signature">' + esc(pcfg.signatureText) + '</div>' : '') +
     (RESTAURANT.devName ? '<div class="r-dev">برمجة: ' + esc(RESTAURANT.devName) + '</div>' : '');
   blocks.qr =
     ((RESTAURANT.qrEnabled !== false) ? (function(){
       const u = makeOrderQR(order);
       return u
-        ? '<div class="r-qr" style="text-align:center;margin-top:10px;padding-top:10px;border-top:1px dashed #999;">' +
+        ? '<div class="r-qr" style="text-align:center;margin:0;padding:0;">' +
             '<img src="' + u + '" alt="QR" style="width:120px;height:120px;image-rendering:pixelated;" />' +
-            '<div class="r-qr-cap" style="font-size:11px;color:#444;margin-top:4px;">امسح الكود لاستدعاء الطلب (' + esc(orderNoLabel(order)) + ')</div>' +
+            '<div class="r-qr-cap" style="font-size:11px;color:#444;margin-top:2px;">امسح الكود لاستدعاء الطلب (' + esc(orderNoLabel(order)) + ')</div>' +
           '</div>'
         : '';
     })() : '');
@@ -864,6 +883,8 @@ function printReceipt(order){
   applyPrintStyle();
   // تطبيق أحجام خطوط الفاتورة المستقلة
   applyInvoiceFonts();
+  // تطبيق إعدادات الطابعة المحلية (عرض الورق/الهوامش/@page/إخفاء الحقول) — يعالج الورق الفارغ والنصف الأيمن
+  try{ if(window.BMSPrinter && typeof BMSPrinter.applyPrintCss==='function') BMSPrinter.applyPrintCss(pcfg); }catch(e){}
   // أعط المتصفح لحظة لرسم المحتوى ثم اطبع
   setTimeout(() => nativePrint(), 60);
 }
@@ -1226,11 +1247,11 @@ function applyMaintenance(m){
   m = m || {};
   var ov = document.getElementById('maintOverlay'); if(!ov) return;
   var isMgr = (typeof isManagerUser==='function' && isManagerUser());
-  if(m.active){
+  // المدير مُستثنى من شاشة «النظام تحت الصيانة» لأنه هو من يقوم بالصيانة،
+  // فيبقى قادراً على استخدام النظام وإنهاء وضع الصيانة متى شاء.
+  if(m.active && !isMgr){
     var t = document.getElementById('maintTitle'); if(t) t.textContent = m.title || 'النظام تحت الصيانة';
     var n = document.getElementById('maintNote'); if(n) n.textContent = m.note || 'نعتذر عن الإزعاج، نقوم حالياً بأعمال صيانة لتحسين الخدمة. سنعود قريباً.';
-    // زر إنهاء الصيانة يظهر للمدير فقط حتى يتمكن من الخروج
-    var ex = document.getElementById('maintExitBtn'); if(ex) ex.style.display = isMgr ? '' : 'none';
     ov.classList.add('show');
   } else {
     ov.classList.remove('show');
@@ -1407,7 +1428,13 @@ function maybeShowUpdate(au){
     performAppReload();
   };
   var later = document.getElementById('updateLaterBtn');
-  if(later) later.onclick = function(){ var m = document.getElementById('updatePromptModal'); if(m) m.classList.remove('show'); };
+  if(later) later.onclick = function(){
+    // «لاحقاً»: اعتبر هذه النسخة مرئية حتى لا تتكرر الرسالة عند كل فتح؛
+    // ستظهر مرة أخرى فقط عند نشر تحديث أحدث (رقم نسخة أعلى).
+    var cur = (typeof RESTAURANT!=='undefined' && RESTAURANT.appUpdate) || {};
+    try{ _setUpdateSeenVer(parseInt(cur.ver,10)||0); }catch(e){}
+    var m = document.getElementById('updatePromptModal'); if(m) m.classList.remove('show');
+  };
   // زر التحديث لكل المستخدمين (بجانب زر التبديل)
   var posUp = document.getElementById('posUpdateBtn');
   if(posUp) posUp.onclick = function(){
@@ -1876,6 +1903,8 @@ function scrollToNewestWeekCard(){
 // ===== Toast =====
 let toastTimer;
 function showToast(msg){
+  // أثناء وضع الصيانة لا تظهر أي رسالة للمستخدمين (المدير مستثنى)
+  if(typeof isMaintenanceBlocking==='function' && isMaintenanceBlocking()) return;
   const t = document.getElementById('toast');
   t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer);
@@ -1990,7 +2019,8 @@ function updatePosUserBox(){
   }catch(e){}
   try{ if(typeof window.featuresOnUserChange==='function') window.featuresOnUserChange(); }catch(e){}
   // إعادة تقييم شاشة الصيانة والميزات الجديدة بعد تغيير المستخدم
-  try{ if(typeof RESTAURANT!=='undefined'){ applyMaintenance(RESTAURANT.maintenance); maybeShowWhatsNew(RESTAURANT.whatsNew); if(typeof maybeShowUpdate==='function') maybeShowUpdate(RESTAURANT.appUpdate); } }catch(e){}
+  // تطبيق الصيانة فقط بعد تحديد دور المستخدم (حتى لا يظهر زر/شاشة قبل تسجيل الدخول)
+  try{ if(typeof RESTAURANT!=='undefined' && currentPosUser){ applyMaintenance(RESTAURANT.maintenance); maybeShowWhatsNew(RESTAURANT.whatsNew); if(typeof maybeShowUpdate==='function') maybeShowUpdate(RESTAURANT.appUpdate); } else if(typeof RESTAURANT!=='undefined'){ applyMaintenance({}); } }catch(e){}
 }
 
 // أزرار تفعيل الدخول الحيوي بعد الدخول — تظهر فقط إن دعمها الجهاز وسمح بها المدير
@@ -2041,6 +2071,7 @@ function restorePosSession(){
     const ov = document.getElementById('loginOverlay');
     if(ov) ov.classList.remove('show');
     routeAfterLogin();
+    try{ if(window.UpgradeCenter) window.UpgradeCenter.refresh(); }catch(e){}
   } else {
     showLogin(false);
   }
@@ -2074,6 +2105,7 @@ function setupPosLogin(){
     const ov = document.getElementById('loginOverlay'); if(ov) ov.classList.remove('show');
     updatePosUserBox();
     routeAfterLogin();
+    try{ if(window.UpgradeCenter) window.UpgradeCenter.refresh(); }catch(e4){}
     showToast('أهلاً ' + currentPosUser.name);
     try{ logActivity('login', 'تسجيل دخول' + (opts.bio ? ' (بصمة)' : '')); }catch(e){}
     if(opts.welcome) maybeShowWelcome(found);
@@ -2112,6 +2144,7 @@ function setupPosLogin(){
     updatePosUserBox();
     showCashier();
     showLogin(false);
+    try{ if(window.UpgradeCenter) window.UpgradeCenter.refresh(); }catch(e5){}
   };
   const switchBtn = document.getElementById('posSwitchBtn');
   if(switchBtn) switchBtn.onclick = () => { showLogin(true); };
@@ -2130,6 +2163,7 @@ function setupPosLogin(){
     updatePosUserBox();
     showCashier();
     showLogin(false);
+    try{ if(window.UpgradeCenter) window.UpgradeCenter.refresh(); }catch(e6){}
   };
 }
 
@@ -2538,6 +2572,17 @@ const PREP_LABELS = { pending: '🕒 بانتظار التأكيد', confirmed: 
 function prepOf(o){ return (o && o.prep) ? o.prep : ''; }
 // مدير = دوره "مدير" أو وضع المدير مفعّل
 function isManagerUser(){ return !!(typeof currentPosUser !== 'undefined' && currentPosUser && currentPosUser.role === 'مدير') || (typeof isManagerUnlocked === 'function' && isManagerUnlocked()); }
+
+// هل يجب حجب الرسائل/التنبيهات عن هذا المستخدم بسبب وضع «الصيانة»؟
+// المدير مستثنى دائماً. الاتصال بالفايربيس يبقى شغّالاً — نمنع فقط ظهور الرسائل.
+function isMaintenanceBlocking(){
+  try{
+    // المدير مستثنى دائماً من حجب الرسائل أثناء وضع الصيانة
+    if(typeof isManagerUser==='function' && isManagerUser()) return false;
+    var mm = (typeof RESTAURANT!=='undefined' && RESTAURANT && RESTAURANT.maintenance) || {};
+    return !!mm.active;
+  }catch(e){ return false; }
+}
 let selfPrepIds = new Set(); // تغيرات حالة أجراها هذا الجهاز (لا تُنبّه نفسها)
 
 // تغيير حالة تحضير الطلب (للمدير فقط)
@@ -2583,6 +2628,7 @@ function requestNotifPermission(){
 
 // إظهار تنبيه على مستوى النظام (ويندوز / شريط إشعارات الجوال)
 function systemNotify(title, body){
+  if(typeof isMaintenanceBlocking==='function' && isMaintenanceBlocking()) return;  // وضع الصيانة: لا رسائل للمستخدمين
   if(!NOTIF_ENABLED) return;                       // معطّل من لوحة التحكم
   if(!notifSupported() || Notification.permission !== 'granted'){
     if(NOTIF_SOUND) playNotifBeep();
@@ -2659,6 +2705,8 @@ function updateSysNotifBtn(){
 const MAX_NOTIFS = 50;        // حد أقصى
 
 function addNotification(title, text, icon, orderId, subId){
+  // أثناء وضع الصيانة: لا تُسجَّل ولا تظهر أي رسالة للمستخدمين (المدير مستثنى)
+  if(typeof isMaintenanceBlocking==='function' && isMaintenanceBlocking()) return;
   const notif = {
     id: 'N-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
     title: title || '',
@@ -2918,13 +2966,16 @@ function applySettings(cfg){
     var _up = document.getElementById('dashUpdateBtn'); if(_up) _up.style.display = _isMgr ? '' : 'none';
   }catch(e){}
   // تطبيق شاشة الصيانة + عرض الميزات الجديدة
-  try{ applyMaintenance(RESTAURANT.maintenance); }catch(e){}
-  try{ maybeShowWhatsNew(RESTAURANT.whatsNew); }catch(e){}
-  try{ if(typeof maybeShowUpdate==='function') maybeShowUpdate(RESTAURANT.appUpdate); }catch(e){}
+  // نطبق الصيانة فقط بعد تسجيل الدخول أو نزيلها قبل الدخول
+  try{ if(currentPosUser){ applyMaintenance(RESTAURANT.maintenance); } else { applyMaintenance({}); } }catch(e){}
+  try{ if(currentPosUser) maybeShowWhatsNew(RESTAURANT.whatsNew); }catch(e){}
+  try{ if(typeof maybeShowUpdate==='function' && currentPosUser) maybeShowUpdate(RESTAURANT.appUpdate); }catch(e){}
   // إظهار/إخفاء أزرار نوع الطلب (محلي/سفري/توصيل) حسب الإعدادات
   applyOrderTypeVisibility(RESTAURANT.orderTypes);
   // إظهار/إخفاء وحجم أزرار الواجهة (features.js)
   try{ if(typeof window.applyUiButtons==='function') window.applyUiButtons(RESTAURANT); }catch(e){}
+  // مركز التحديث والترقية (updater.js): تحديث قائمة النسخ + تبويب المدير
+  try{ if(typeof window.UpgradeCenter==='function' || (window.UpgradeCenter && typeof window.UpgradeCenter.refresh==='function')) window.UpgradeCenter.refresh(); }catch(e){}
   // تطبيق إعدادات الإشعارات
   NOTIF_ENABLED = (cfg.notifEnabled !== false);
   NOTIF_SOUND   = (cfg.notifSound !== false);

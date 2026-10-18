@@ -212,22 +212,23 @@ button{font-family:inherit}
 .toast.show{transform:translateX(-50%) translateY(0)}
 
 /* ===== Printable receipt ===== */
+/* ملاحظة: بنية الطباعة (عرض الورق/الهوامش/@page/إخفاء باقي الصفحة) يتولّاها محرّك BMSPrinter (printer.js)
+   ديناميكياً حسب إعدادات الجهاز؛ لا نضع هنا @page أو عرضاً ثابتاً (80مم) حتى لا يتعارض */
 .receipt{display:none}
-@media print{
-  body *{visibility:hidden}
-  .receipt, .receipt *{visibility:visible}
-  .receipt{display:block;position:absolute;top:0;right:0;left:0;width:80mm;margin:0 auto;padding:6mm 4mm;color:#000;font-size:12px}
-}
 .receipt .r-center{text-align:center}
 .receipt h2{font-size:18px;margin-bottom:2px}
 .receipt .r-sub{font-size:11px;color:#333}
 .receipt .r-line{border-top:1px dashed #000;margin:8px 0}
 .receipt .r-meta{font-size:11px;line-height:1.7}
-.receipt table{width:100%;border-collapse:collapse;font-size:11px}
+.receipt table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
 .receipt table th{text-align:right;border-bottom:1px solid #000;padding:3px 0}
-.receipt table th.c,.receipt table td.c{text-align:center}
-.receipt table th.l,.receipt table td.l{text-align:left}
+.receipt table th.c,.receipt table td.c{text-align:center;white-space:nowrap;width:22px}
+.receipt table th.l,.receipt table td.l{text-align:left;width:92px;word-break:break-all}
 .receipt table td{padding:3px 0;vertical-align:top}
+.receipt table th:first-child,.receipt table td:first-child{text-align:right}
+.receipt table td,.receipt table th{word-break:break-word;word-wrap:break-word;overflow-wrap:break-word;overflow-wrap:anywhere;white-space:normal;max-width:100%}
+.receipt .r-tot{flex-wrap:wrap}
+.receipt .r-tot span{word-break:break-all;word-wrap:break-word;overflow-wrap:anywhere;min-width:0;max-width:100%}
 .receipt .r-tot{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}
 .receipt .r-tot.big{font-size:15px;font-weight:800}
 .receipt .r-tot.remain{color:#000;border-top:1px dashed #000;margin-top:4px;padding-top:4px}
@@ -257,6 +258,11 @@ button{font-family:inherit}
   .head-right::-webkit-scrollbar{display:none}
   .report-link,.admin-link{white-space:nowrap;flex-shrink:0;font-size:13px;padding:9px 13px}
   .pos-user{flex-shrink:0}
+  /* صف أزرار المدير (كاشير / مسح QR / السجل) قابل للتمرير أفقياً مثل الصف السفلي */
+  .pos-header .brand{width:100%;overflow-x:auto;flex-wrap:nowrap;justify-content:flex-start;gap:10px;padding-bottom:4px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .pos-header .brand::-webkit-scrollbar{display:none}
+  .pos-header .brand>*{flex-shrink:0}
+  .brand-switch{white-space:nowrap;flex-shrink:0}
 
   /* ===== الكتالوج يملأ الشاشة ===== */
   .pos{display:block;height:auto}

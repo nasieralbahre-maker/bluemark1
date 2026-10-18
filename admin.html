@@ -566,6 +566,7 @@ body.admin-dark .settings-subhead{color:var(--ink);}
       <button class="side-link" data-tab="settings">⚙️ الإعدادات</button>
       <button class="side-link" data-tab="users">👥 المستخدمون</button>
       <button class="side-link" data-tab="signups">🆕 طلبات الحساب <span class="side-badge" id="signupBadge" style="display:none">0</span></button>
+      <button class="side-link" data-tab="printer">🖨️ إعدادات الطابعة</button>
     </nav>
     <div class="side-foot">
       <a href="dashboard.html" class="side-link">📊 لوحة المعلومات</a>
@@ -680,26 +681,6 @@ body.admin-dark .settings-subhead{color:var(--ink);}
           </div>
           <label>اسم المبرمج<input type="text" id="setDevName" maxlength="60" placeholder="يظهر أسفل الفاتورة: برمجة: ..." /></label>
           <small class="settings-hint">يُصغّر الشعار تلقائياً لتوفير المساحة؛ يُفضّل شعار أبيض/أسود بسيط لوضوح الطباعة الحرارية.</small>
-        </div>
-
-        <div class="settings-card">
-          <h3>إعدادات الطباعة</h3>
-          <label>موقع الفاتورة على الورقة
-            <select id="setAlign">
-              <option value="right">يمين</option>
-              <option value="center">وسط</option>
-              <option value="left">يسار</option>
-            </select>
-          </label>
-          <div class="form-row">
-            <label>الهامش الجانبي (مم)<input type="number" id="setMarginSide" min="0" max="40" step="1" /></label>
-            <label>الهامش العلوي (مم)<input type="number" id="setMarginTop" min="0" max="60" step="1" /></label>
-          </div>
-          <div class="form-row">
-            <label>الحشو الرأسي (مم)<input type="number" id="setPaddingV" min="0" max="40" step="1" /></label>
-            <label>حجم الخط (px)<input type="number" id="setFontSize" min="8" max="20" step="1" /></label>
-          </div>
-          <small class="settings-hint">يتحكم الموقع بمحاذاة الفاتورة (80مم) يمين/وسط/يسار الورقة.</small>
         </div>
 
         <div class="settings-card">
@@ -1136,6 +1117,158 @@ body.admin-dark .settings-subhead{color:var(--ink);}
         </table>
       </div>
     </section>
+
+    <!-- Printer settings tab -->
+    <section class="tab" id="tab-printer">
+      <div class="tab-head"><h2>🖨️ إعدادات الطابعة</h2></div>
+      <small class="settings-hint" style="display:block;margin-bottom:14px">إعدادات طابعة الكاشير الحرارية (POS 58/80مم). تُحفظ هذه الإعدادات محلياً على هذا الجهاز/المتصفّح لأنّ كلّ جهاز قد تكون له طابعة مختلفة.</small>
+      <div class="printer-wrap" style="display:flex;gap:18px;align-items:flex-start">
+        <div class="printer-cfg" style="flex:1;min-width:0">
+          <div class="settings-card">
+            <h3>قياس الورق والهوامش</h3>
+            <label>عرض الورق
+              <select id="pPaper">
+                <option value="80">80 مم (الأشيع)</option>
+                <option value="58">58 مم</option>
+                <option value="72">72 مم</option>
+                <option value="60">60 مم</option>
+                <option value="44">44 مم</option>
+                <option value="custom">مخصص…</option>
+              </select>
+            </label>
+            <div id="pCustomWrap" style="display:none;gap:10px;flex-wrap:wrap">
+              <label style="flex:1;min-width:120px">عرض مخصص (مم)
+                <input type="number" id="pPaperCustom" min="30" max="200" step="1" placeholder="مثال: 76" />
+              </label>
+              <label style="flex:1;min-width:120px">ارتفاع الورق (مم)
+                <input type="number" id="pPaperHeight" min="0" max="2000" step="1" placeholder="0 = تلقائي" />
+              </label>
+            </div>
+            <label>محاذاة المحتوى
+              <select id="pAlign">
+                <option value="center">وسط</option>
+                <option value="right">يمين</option>
+                <option value="left">يسار</option>
+              </select>
+            </label>
+            <div class="form-row">
+              <label>الهامش العلوي (مم)<input type="number" id="pMarginTop" min="0" max="40" step="1" /></label>
+              <label>الهامش السفلي (مم)<input type="number" id="pMarginBottom" min="0" max="40" step="1" /></label>
+            </div>
+            <div class="form-row">
+              <label>الهامش الجانبي (مم)<input type="number" id="pMarginSide" min="0" max="20" step="1" /></label>
+              <label>حجم الخط (px)<input type="number" id="pFontSize" min="8" max="22" step="1" /></label>
+            </div>
+            <label>نوع الخط
+              <select id="pFontFamily">
+                <option value="cairo">Cairo (عربي واضح)</option>
+                <option value="tahoma">Tahoma</option>
+                <option value="monospace">ثابت العرض (Monospace)</option>
+              </select>
+            </label>
+            <div class="form-row">
+              <label>حجم كود QR (px)<input type="number" id="pQrSize" min="40" max="200" step="2" /></label>
+              <label>المسافة أعلى كود QR (px)<input type="number" id="pQrGap" min="0" max="40" step="1" /></label>
+            </div>
+            <label>المسافة بين كتل الفاتورة (px)<input type="number" id="pLineGap" min="0" max="30" step="1" /></label>
+            <div class="form-row">
+              <label>عرض عمود الصنف (px) — 0 = مرن<input type="number" id="pColName" min="0" max="200" step="1" /></label>
+              <label>عرض عمود الكمية (px)<input type="number" id="pColQty" min="6" max="80" step="1" /></label>
+            </div>
+            <div class="form-row">
+              <label>عرض عمود المبلغ (px)<input type="number" id="pColPrice" min="20" max="160" step="1" /></label>
+              <label>تفراغ داخلي يسار (px) — يبعد السعر عن السكرول<input type="number" id="pColClear" min="0" max="60" step="1" /></label>
+            </div>
+            <small class="settings-hint">في الاتجاه RTL يجلس السكرول على يسار الصفحة ويغطي عمود المبلغ. اجعل «التفراغ الداخلي يسار» ≥ عرض السكرول (≈18px) حتى يظهر السعر، واضبط عرض الأعمدة كما تحب.</small>
+            <small class="settings-hint">ضبط العرض وجعل الهوامش صفراً يمنع ظهور الفاتورة في النصف الأيمن ويوقف خروج ورق فارغ طويل.</small>
+          </div>
+
+          <div class="settings-card">
+            <h3>الحقول الظاهرة على الفاتورة</h3>
+            <div class="printer-checks" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 14px">
+              <label class="check-row"><input type="checkbox" id="pShowLogo" /> الشعار</label>
+              <label class="check-row"><input type="checkbox" id="pShowName" /> اسم النظام</label>
+              <label class="check-row"><input type="checkbox" id="pShowEstab" /> بيانات المنشأة (العنوان/الهاتف)</label>
+              <label class="check-row"><input type="checkbox" id="pShowInvno" /> رقم الطلب</label>
+              <label class="check-row"><input type="checkbox" id="pShowDate" /> التاريخ</label>
+              <label class="check-row"><input type="checkbox" id="pShowCustomer" /> اسم العميل</label>
+              <label class="check-row"><input type="checkbox" id="pShowPhone" /> جوال العميل</label>
+              <label class="check-row"><input type="checkbox" id="pShowItems" /> جدول الأصناف</label>
+              <label class="check-row"><input type="checkbox" id="pShowQty" /> عمود الكمية</label>
+              <label class="check-row"><input type="checkbox" id="pShowPrices" /> عمود الأسعار</label>
+              <label class="check-row"><input type="checkbox" id="pShowDiscount" /> الخصم</label>
+              <label class="check-row"><input type="checkbox" id="pShowTotal" /> الإجمالي</label>
+              <label class="check-row"><input type="checkbox" id="pShowPaid" /> المبلغ المدفوع</label>
+              <label class="check-row"><input type="checkbox" id="pShowRemaining" /> المتبقي</label>
+              <label class="check-row"><input type="checkbox" id="pShowThanks" /> عبارة الشكر</label>
+              <label class="check-row"><input type="checkbox" id="pShowSignature" /> خانة التوقيع</label>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>عبارة الشكر والتوقيع</h3>
+            <label>عبارة الشكر (تظهر أسفل الفاتورة)<input type="text" id="pThankText" maxlength="80" placeholder="شكراً لزيارتكم" /></label>
+            <label>نص خانة التوقيع<input type="text" id="pSignText" maxlength="80" placeholder="التوقيع: ..." /></label>
+          </div>
+
+          <div class="settings-card">
+            <h3>⚙️ إعدادات مشتركة للمؤسسة (تُحفظ للجميع)</h3>
+            <small class="settings-hint" style="margin-bottom:8px;display:block">تؤثر على موضع الفاتورة المخزّن في النظام (لكل الأجهزة). تُحفظ مع زر «حفظ الإعدادات» أدناه.</small>
+            <label>موقع الفاتورة على الورقة
+              <select id="setAlign">
+                <option value="right">يمين</option>
+                <option value="center">وسط</option>
+                <option value="left">يسار</option>
+              </select>
+            </label>
+            <div class="form-row">
+              <label>الهامش الجانبي (مم)<input type="number" id="setMarginSide" min="0" max="40" step="1" /></label>
+              <label>الهامش العلوي (مم)<input type="number" id="setMarginTop" min="0" max="60" step="1" /></label>
+            </div>
+            <div class="form-row">
+              <label>الحشو الرأسي (مم)<input type="number" id="setPaddingV" min="0" max="40" step="1" /></label>
+              <label>حجم الخط (px)<input type="number" id="setFontSize" min="8" max="20" step="1" /></label>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>🔌 الطابعة والطباعة المباشرة</h3>
+            <label>الطابعة الافتراضية (من طابعات الجهاز)
+              <span style="display:flex;gap:8px;align-items:center">
+                <input type="text" id="pDefaultPrinter" list="pPrinterList" maxlength="60" placeholder="اختر أو اكتب اسم الطابعة" style="flex:1" />
+                <button type="button" class="btn" id="pRefreshPrinters" style="flex:none;white-space:nowrap">🔄 تحديث</button>
+              </span>
+            </label>
+            <datalist id="pPrinterList"></datalist>
+            <small class="settings-hint" id="pPrintersHint" style="margin:-6px 0 10px;display:block"></small>
+            <div class="form-row">
+              <label>عدد النسخ<input type="number" id="pCopies" min="1" max="5" step="1" /></label>
+              <label>تغذية أسطر بعد الطباعة<input type="number" id="pFeedLines" min="0" max="10" step="1" /></label>
+            </div>
+            <label class="check-row"><input type="checkbox" id="pSilent" /> طباعة مباشرة دون نافذة معاينة (إن دعمها الجهاز)</label>
+            <label class="check-row"><input type="checkbox" id="pAutoCut" /> قطع تلقائي للورق بعد الطباعة</label>
+            <label class="check-row"><input type="checkbox" id="pCashDrawer" /> فتح درج النقود عند الطباعة</label>
+            <small class="settings-hint">الطباعة المباشرة/القطع/درج النقود تعمل عندما يدعمها تطبيق الجوال (الجسر الأصلي)؛ في المتصفّح تحددها نافذة الطباعة.</small>
+          </div>
+
+          <div class="settings-card">
+            <div class="printer-actions" style="display:flex;flex-wrap:wrap;gap:10px">
+              <button type="button" class="btn primary" id="pAutoSetupBtn" style="background:linear-gradient(135deg,#15803d,#22c55e)">⚙️ ضبط تلقائي للطابعة</button>
+              <button type="button" class="btn primary" id="pSaveBtn">💾 حفظ الإعدادات</button>
+              <button type="button" class="btn" id="pTestBtn">🖨️ طباعة تجريبية</button>
+              <button type="button" class="btn" id="pRestoreBtn">↩️ استعادة الافتراضي</button>
+            </div>
+            <div id="pAutoSetupHint" class="settings-hint" style="display:none;margin-top:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;line-height:1.9;color:#166534"></div>
+          </div>
+        </div>
+        <div class="printer-preview" style="flex:0 0 300px;max-width:300px">
+          <div class="settings-card" style="position:sticky;top:12px">
+            <h3>👁️ معاينة حية</h3>
+            <div id="pPreview" style="background:#e9edf3;padding:14px;border-radius:8px;max-height:65vh;overflow:auto;display:flex;justify-content:center"></div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -1214,11 +1347,14 @@ body.admin-dark .settings-subhead{color:var(--ink);}
 </div>
 
 <div class="toast" id="toast"></div>
+<!-- عنصر الفاتورة للطباعة التجريبية (مخفي على الشاشة) -->
+<div id="receipt" class="receipt" style="display:none"></div>
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="db.js"></script>
+<script src="printer.js"></script>
 <script src="admin.js"></script>
 <script>
 /* توسيع / طي القائمة الزرقاء على الجوال */

@@ -195,6 +195,8 @@ function applyPermissions(){
     // تبويب طلبات الحساب متاح للمدير أو من يملك صلاحية إدارة المستخدمين
     const allowed = (tab === 'signups')
       ? ((currentUser && currentUser.role === 'مدير') || perms.users === true)
+      : (tab === 'printer')
+      ? ((currentUser && currentUser.role === 'مدير') || perms.settings === true)
       : (perms[tab] === true);
     link.style.display = allowed ? '' : 'none';
     if(allowed && !firstAllowed) firstAllowed = tab;
@@ -1817,4 +1819,215 @@ window.AdminUI = (function(){
   }
 
   return { fill: fill, collect: collect, applyAppearance: applyAppearance };
+})();
+
+/* ============================================================
+   إعدادات الطابعة (محلية على الجهاز) — ربط واجهة تبويب #tab-printer
+   ============================================================ */
+(function(){
+  if(!window.BMSPrinter) return;
+  var ids = {
+    align:'pAlign', marginTop:'pMarginTop', marginBottom:'pMarginBottom',
+    marginSide:'pMarginSide', fontSize:'pFontSize', fontFamily:'pFontFamily',
+    thankYouText:'pThankText', signatureText:'pSignText',
+    defaultPrinter:'pDefaultPrinter', copies:'pCopies', feedLines:'pFeedLines',
+    qrSize:'pQrSize', qrGap:'pQrGap', lineGap:'pLineGap',
+    colName:'pColName', colQty:'pColQty', colPrice:'pColPrice', colClear:'pColClear'
+  };
+  var boolIds = { silent:'pSilent', autoCut:'pAutoCut', cashDrawer:'pCashDrawer' };
+  var showIds = {
+    logo:'pShowLogo', name:'pShowName', establishment:'pShowEstab', invoiceNo:'pShowInvno',
+    date:'pShowDate', customer:'pShowCustomer', phone:'pShowPhone', items:'pShowItems',
+    qty:'pShowQty', prices:'pShowPrices', discount:'pShowDiscount', total:'pShowTotal',
+    paid:'pShowPaid', remaining:'pShowRemaining', thankYou:'pShowThanks', signature:'pShowSignature'
+  };
+  var numKeys = {marginTop:1, marginBottom:1, marginSide:1, fontSize:1, copies:1, feedLines:1, qrSize:1, qrGap:1, lineGap:1, colName:1, colQty:1, colPrice:1, colClear:1};
+  function $(id){ return document.getElementById(id); }
+  var STD_W = {58:1, 80:1, 72:1, 60:1, 44:1};
+  function syncCustom(){
+    var sel=$('pPaper'), wrap=$('pCustomWrap');
+    if(wrap) wrap.style.display = (sel && sel.value==='custom') ? 'flex' : 'none';
+  }
+  function fillForm(cfg){
+    Object.keys(ids).forEach(function(k){ var el=$(ids[k]); if(el) el.value = (cfg[k]!=null?cfg[k]:''); });
+    Object.keys(boolIds).forEach(function(k){ var el=$(boolIds[k]); if(el) el.checked = cfg[k]===true; });
+    cfg.show = cfg.show || {};
+    Object.keys(showIds).forEach(function(k){ var el=$(showIds[k]); if(el) el.checked = cfg.show[k]!==false; });
+    // عرض/ارتفاع الورق (قوائم قياسية + مخصص)
+    var sel=$('pPaper'), cust=$('pPaperCustom'), ph=$('pPaperHeight');
+    var w = parseFloat(cfg.paperWidth)||80;
+    var h = parseFloat(cfg.paperHeight)||0;
+    if(sel){
+      if(STD_W[w]){ sel.value = String(w); if(cust) cust.value=''; }
+      else { sel.value = 'custom'; if(cust) cust.value = w; }
+    }
+    if(ph) ph.value = h>0 ? h : '';
+    syncCustom();
+  }
+  function readForm(){
+    var cfg = BMSPrinter.load();
+    Object.keys(ids).forEach(function(k){
+      var el=$(ids[k]); if(!el) return;
+      cfg[k] = numKeys[k] ? (parseFloat(el.value)||0) : el.value;
+    });
+    // عرض الورق: قياسي أو مخصّص (حرّ 30–200مم)
+    var sel=$('pPaper'), cust=$('pPaperCustom'), ph=$('pPaperHeight');
+    var w;
+    if(sel && sel.value==='custom'){ w = parseFloat(cust && cust.value)||80; }
+    else { w = parseFloat(sel && sel.value)||80; }
+    if(w<30) w=30; if(w>200) w=200;
+    cfg.paperWidth = w;
+    var h = parseFloat(ph && ph.value)||0;
+    if(h<0) h=0; if(h>2000) h=2000;
+    cfg.paperHeight = h;
+    if(cfg.copies < 1) cfg.copies = 1;
+    Object.keys(boolIds).forEach(function(k){ var el=$(boolIds[k]); if(el) cfg[k]=el.checked; });
+    cfg.show = cfg.show || {};
+    Object.keys(showIds).forEach(function(k){ var el=$(showIds[k]); if(el) cfg.show[k]=el.checked; });
+    return cfg;
+  }
+  function preview(){ try{ BMSPrinter.renderPreview('#pPreview', readForm()); }catch(e){} }
+
+  // ⚙️ ضبط تلقائي ذكي: يضبط كل ما يتحكم فيه التطبيق بضغطة واحدة
+  function detectWidthFromName(name){
+    var s = String(name||'').toLowerCase();
+    if(/\b58\b|58mm|pos-?58|rp58|58/.test(s)) return 58;
+    if(/\b80\b|80mm|pos-?80|rp80|80/.test(s)) return 80;
+    if(/\b76\b|76mm/.test(s)) return 76;
+    if(/\b57\b|57mm/.test(s)) return 57;
+    return 0;
+  }
+  function autoSetup(){
+    var cfg = BMSPrinter.load();
+    // 1) اكتشاف عرض الورق من اسم الطابعة المختارة (مثل POS-58)
+    var pnameEl = $('pDefaultPrinter');
+    var detected = detectWidthFromName(pnameEl && pnameEl.value);
+    if(detected){ cfg.paperWidth = detected; }
+    else if(!cfg.paperWidth){ cfg.paperWidth = 80; }
+    // 2) ارتفاع تلقائي (يقص بعد آخر سطر) — يمنع الأوراق الفارغة/الصفحات المتعددة
+    cfg.paperHeight = 0;
+    // 3) هوامش صفرية مثالية للطابعات الحرارية
+    cfg.marginTop = 0; cfg.marginBottom = 0; cfg.marginSide = 2;
+    // 4) طباعة مباشرة + قطع تلقائي (تعمل عند دعم الجسر الأصلي)
+    cfg.silent = true; cfg.autoCut = true;
+    if(!cfg.copies || cfg.copies < 1) cfg.copies = 1;
+    if(cfg.feedLines == null) cfg.feedLines = 0;
+    // 5) حجم خط مناسب لعرض الورق
+    cfg.fontSize = (cfg.paperWidth <= 58) ? 11 : 12;
+    BMSPrinter.save(cfg);
+    BMSPrinter.applyPrintCss(cfg);
+    fillForm(cfg);
+    preview();
+    var msg = detected
+      ? ('✔️ تم الضبط تلقائياً حسب الطابعة (عرض ' + detected + 'مم).')
+      : '✔️ تم ضبط الإعدادات المثالية (هوامش 0، ارتفاع تلقائي).';
+    if(typeof showToast==='function') showToast(msg);
+    // إرشاد صريح: ما لا يستطيع التطبيق ضبطه في نافذة المتصفّح
+    var hint = $('pAutoSetupHint');
+    if(hint){
+      hint.style.display='block';
+      hint.innerHTML =
+        '<b>تم ضبط إعدادات التطبيق بالكامل ✅</b><br>'+
+        'لطباعة نظيفة بلا أوراق فارغة، ضبط مرّة واحدة في <b>نافذة طباعة المتصفّح</b> (يحفظها المتصفّح لاحقاً):'+
+        '<br>• <b>الهوامش</b> ← «بلا / None»'+
+        '<br>• ألغِ علامة <b>«الرؤوس والتذييلات» (Headers and footers)</b>'+
+        '<br>• <b>حجم الورق</b> ← طابقه لعرض طابعتك (58 أو 80مم)'+
+        '<br><small>ملاحظة: لا يستطيع أي موقع تغيير هذه الخيارات داخل نافذة المتصفّح (قيد أمني)؛ الطباعة الصامتة الكاملة تحتاج الجسر الأصلي في غلاف التطبيق.</small>';
+    }
+  }
+
+  // ===== استدعاء طابعات الجهاز (عبر الجسر الأصلي إن توفّر) =====
+  function getNativePrinters(){
+    var A = window.AndroidPrint;
+    try{
+      if(A){
+        if(typeof A.getPrinters==='function') return JSON.parse(A.getPrinters()||'[]');
+        if(typeof A.listPrinters==='function') return JSON.parse(A.listPrinters()||'[]');
+        if(typeof A.printers==='function') return JSON.parse(A.printers()||'[]');
+      }
+      if(Array.isArray(window.BMS_PRINTERS)) return window.BMS_PRINTERS;
+    }catch(e){}
+    return null; // null = غير مدعوم
+  }
+  function fillPrinters(list){
+    var dl=$('pPrinterList'); var hint=$('pPrintersHint');
+    if(!dl) return;
+    var names = [];
+    if(Array.isArray(list)){
+      names = list.map(function(p){ return (p && typeof p==='object') ? (p.name||p.id||'') : String(p); }).filter(Boolean);
+    }
+    dl.innerHTML = names.map(function(n){ return '<option value="'+String(n).replace(/"/g,'&quot;')+'"></option>'; }).join('');
+    if(hint){
+      if(names.length) hint.textContent = '✔️ تم العثور على ' + names.length + ' طابعة — اختر واحدة من القائمة.';
+      else if(list===null) hint.textContent = 'ℹ️ استدعاء طابعات الجهاز يتطلّب دعم تطبيق الجوال (الجسر الأصلي)؛ يمكنك كتابة اسم الطابعة يدوياً. في المتصفّح تُختار الطابعة من نافذة الطباعة.';
+      else hint.textContent = 'ℹ️ لم يُعثر على طابعات معرّفة على الجهاز؛ يمكنك كتابة الاسم يدوياً.';
+    }
+  }
+  function refreshPrinters(){
+    var A = window.AndroidPrint;
+    try{ if(A && typeof A.requestPrinters==='function'){ A.requestPrinters(); } }catch(e){}
+    fillPrinters(getNativePrinters());
+  }
+  // دالة عامة يستدعيها الجسر الأصلي عند جاهزية القائمة (غير متزامن)
+  window.bmsOnPrinters = function(data){
+    var list = data;
+    try{ if(typeof data==='string') list = JSON.parse(data); }catch(e){ list = []; }
+    window.BMS_PRINTERS = Array.isArray(list) ? list : [];
+    fillPrinters(window.BMS_PRINTERS);
+  };
+
+  function bind(){
+    var wrap = $('tab-printer'); if(!wrap) return;
+    wrap.addEventListener('input', preview);
+    wrap.addEventListener('change', preview);
+    var selPaper=$('pPaper');
+    if(selPaper) selPaper.addEventListener('change', function(){ syncCustom(); preview(); });
+    var sv=$('pSaveBtn');
+    if(sv) sv.onclick=function(){
+      var c=readForm(); BMSPrinter.save(c); BMSPrinter.applyPrintCss(c);
+      if(typeof showToast==='function') showToast('تم حفظ إعدادات الطابعة على هذا الجهاز');
+    };
+    var rp=$('pRefreshPrinters'); if(rp) rp.onclick=refreshPrinters;
+
+    // ⚙️ ضبط تلقائي للطابعة — يضبط كل ما يتحكم فيه التطبيق تلقائياً
+    var au=$('pAutoSetupBtn'); if(au) au.onclick=autoSetup;
+    var tb=$('pTestBtn');
+    if(tb) tb.onclick=function(){
+      var c=readForm(); var r=$('receipt');
+      if(r){ r.style.display='block'; r.innerHTML=BMSPrinter.sampleReceiptHtml(c); }
+      BMSPrinter.applyPrintCss(c);
+      setTimeout(function(){ try{ if(typeof bmsDoPrint==='function'){ bmsDoPrint(c); } else { window.print(); } }catch(e){} }, 90);
+      // أخفِ نسخة الفاتورة أسفل الصفحة بعد انتهاء الطباعة حتى لا تتكرر المعاينة (تبقى المعاينة الحية فقط)
+      setTimeout(function(){ var rr=$('receipt'); if(rr){ rr.style.display='none'; rr.innerHTML=''; } }, 1600);
+    };
+    var rb=$('pRestoreBtn');
+    if(rb) rb.onclick=function(){
+      var d=JSON.parse(JSON.stringify(BMSPrinter.defaults));
+      BMSPrinter.save(d); fillForm(d); preview();
+      if(typeof showToast==='function') showToast('تمت استعادة الإعدادات الافتراضية');
+    };
+    // تحديث المعاينة والطابعات عند فتح تبويب الطابعة
+    var link = document.querySelector('.side-link[data-tab="printer"]');
+    if(link) link.addEventListener('click', function(){ setTimeout(function(){ preview(); refreshPrinters(); }, 30); });
+  }
+  // محرّك طباعة موحّد يحترم الطباعة المباشرة/النسخ/القطع/درج النقود عبر الجسر الأصلي
+  window.bmsDoPrint = function(cfg){
+    cfg = cfg || BMSPrinter.load();
+    try{
+      var A = window.AndroidPrint;
+      if(A){
+        var opt = { printer: cfg.defaultPrinter||'', copies: cfg.copies||1,
+                    silent: cfg.silent===true, autoCut: cfg.autoCut!==false,
+                    cashDrawer: cfg.cashDrawer===true, feedLines: cfg.feedLines||0, width: cfg.paperWidth };
+        if(cfg.silent===true && typeof A.printSilent==='function'){ A.printSilent(JSON.stringify(opt)); return; }
+        if(typeof A.printWith==='function'){ A.printWith(JSON.stringify(opt)); return; }
+        if(typeof A.print==='function'){ A.print(); return; }
+      }
+    }catch(e){}
+    try{
+      var n = Math.max(1, parseInt(cfg.copies,10)||1);
+      (function loop(i){ if(i<=0) return; window.print(); if(i>1) setTimeout(function(){ loop(i-1); }, 400); })(n);
+    }catch(e){ try{ window.print(); }catch(_){} }
+  };
+  try{ fillForm(BMSPrinter.load()); bind(); preview(); refreshPrinters(); }catch(e){}
 })();
