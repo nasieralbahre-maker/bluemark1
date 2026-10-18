@@ -1,0 +1,55 @@
+{
+  "name": "bms-sy",
+  "productName": "BMS SY",
+  "version": "1.0.0",
+  "description": "BMS SY — نظام الكاشير الحراري (POS)",
+  "author": "BMS SY",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:portable": "electron-builder --win portable --x64",
+    "dist:installer": "electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.bms.sy",
+    "productName": "BMS SY",
+    "artifactName": "BMS-SY-${version}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "index.html",
+      "admin.html",
+      "dashboard.html",
+      "brand.html",
+      "order.html",
+      "track.html",
+      "*.js",
+      "*.css",
+      "assets/**/*",
+      "manifest.json",
+      "firestore.rules",
+      "netlify.toml",
+      "*.png",
+      "*.jpg"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [ "x64" ]
+        }
+      ],
+      "icon": "assets/icon.png"
+    },
+    "portable": {
+      "artifactName": "BMS-SY-${version}.exe"
+    }
+  }
+}

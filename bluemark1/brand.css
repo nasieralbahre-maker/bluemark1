@@ -1,0 +1,198 @@
+/* =========================================================================
+   Sweets — نظام الهوية البصرية الموحّد (Brand Design System)
+   مصدر واحد للألوان والخطوط والمكوّنات عبر كل واجهات النظام.
+   يُحمّل بعد باقي أنماط الصفحة لتوحيد المظهر دون كسر التخطيط.
+   الهوية: أزرق ملكي + أبيض، مع لمسة حلوى وردية (candy).
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Lalezar&display=swap');
+
+:root{
+  /* ---- الأزرق الملكي (اللون الأساسي من الشعار) ---- */
+  --br-blue:#1e4ed0;
+  --br-blue-050:#eef3fe;
+  --br-blue-100:#dbe6fc;
+  --br-blue-200:#bcd0f9;
+  --br-blue-600:#1d4ed8;
+  --br-blue-700:#1b3fa8;
+  --br-blue-900:#152a66;
+  --br-sky:#60a5fa;
+  --br-sky-light:#93c5fd;
+
+  /* ---- لمسة الحلوى (Candy accent) ---- */
+  --br-candy:#ff4d8d;
+  --br-candy-600:#e23b78;
+  --br-candy-050:#ffe9f1;
+  --br-candy-light:#ff85b0;
+  --br-mint:#2fd4a7;
+  --br-gold:#f6b73c;
+
+  /* ---- المحايدات ---- */
+  --br-ink:#0f172a;
+  --br-ink-2:#1e293b;
+  --br-muted:#64748b;
+  --br-faint:#94a3b8;
+  --br-line:#e2e8f0;
+  --br-paper:#ffffff;
+  --br-bg:#eef2f9;
+  --br-bg-2:#f8fafc;
+
+  /* ---- الألوان الدلالية ---- */
+  --br-ok:#16a34a;
+  --br-warn:#f59e0b;
+  --br-danger:#dc2626;
+  --br-info:#2563eb;
+
+  /* ---- التدرّجات ---- */
+  --br-grad-blue:linear-gradient(135deg,#1b3fa8 0%,#1e4ed0 55%,#3b82f6 120%);
+  --br-grad-candy:linear-gradient(135deg,#e23b78 0%,#ff4d8d 60%,#ff85b0 120%);
+  --br-grad-deep:linear-gradient(165deg,#111c3a 0%,#1b3fa8 55%,#1e4ed0 120%);
+  --br-grad-sky:linear-gradient(135deg,#1e4ed0,#60a5fa);
+
+  /* ---- تنسيق عام ---- */
+  --br-radius:16px;
+  --br-radius-sm:11px;
+  --br-radius-lg:22px;
+  --br-shadow:0 18px 40px -22px rgba(21,42,102,.45);
+  --br-shadow-sm:0 8px 20px -12px rgba(21,42,102,.4);
+  --br-shadow-blue:0 16px 34px -14px rgba(30,78,208,.6);
+  --br-shadow-candy:0 14px 30px -12px rgba(255,77,141,.55);
+  --br-ring:0 0 0 3px rgba(30,78,208,.22);
+  --br-font:'Cairo',system-ui,'Segoe UI',Tahoma,sans-serif;
+  --br-font-display:'Lalezar','Cairo',system-ui,sans-serif;
+  --br-ease:cubic-bezier(.2,.8,.2,1);
+}
+
+/* =========================================================================
+   أساسيات آمنة (إضافية ولا تكسر التخطيط)
+   ========================================================================= */
+html{ -webkit-text-size-adjust:100%; }
+body{
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+}
+
+/* لون التحديد (انتقاء النص) */
+::selection{ background:rgba(30,78,208,.18); color:var(--br-blue-900); }
+
+/* حلقة تركيز موحّدة للوصولية */
+:where(button,a,input,select,textarea,[tabindex]):focus-visible{
+  outline:none;
+  box-shadow:var(--br-ring);
+  border-radius:10px;
+}
+
+/* شريط تمرير متناسق مع الهوية */
+*{ scrollbar-width:thin; scrollbar-color:var(--br-blue-200) transparent; }
+*::-webkit-scrollbar{ width:10px; height:10px; }
+*::-webkit-scrollbar-track{ background:transparent; }
+*::-webkit-scrollbar-thumb{
+  background:linear-gradient(var(--br-blue-200),var(--br-blue-100));
+  border-radius:20px; border:2px solid transparent; background-clip:padding-box;
+}
+*::-webkit-scrollbar-thumb:hover{ background:var(--br-sky); background-clip:padding-box; }
+
+/* =========================================================================
+   مكوّنات الهوية القابلة للاستخدام (منطاق class مخصصة)
+   ========================================================================= */
+
+/* خط عرضي للعناوين البراندية الكبيرة */
+.br-display{ font-family:var(--br-font-display); letter-spacing:.5px; }
+
+/* شعار + اسم (brand lockup) */
+.br-lockup{ display:inline-flex; align-items:center; gap:12px; }
+.br-lockup .br-mark{
+  width:46px; height:46px; border-radius:14px; background:#fff; padding:5px;
+  box-shadow:var(--br-shadow-blue); display:flex; align-items:center; justify-content:center;
+  object-fit:contain;
+}
+.br-lockup .br-name{
+  font-family:var(--br-font-display); font-size:24px; line-height:1; color:var(--br-blue);
+  letter-spacing:.5px;
+}
+.br-lockup .br-name .br-sweets{ color:var(--br-candy); }
+
+/* شارة براند */
+.br-badge{
+  display:inline-flex; align-items:center; gap:5px; font-weight:800; font-size:12px;
+  padding:4px 11px; border-radius:999px; background:var(--br-blue-050); color:var(--br-blue-700);
+  border:1px solid var(--br-blue-100);
+}
+.br-badge.candy{ background:var(--br-candy-050); color:var(--br-candy-600); border-color:#ffd0e0; }
+.br-badge.ok{ background:#dcfce7; color:#15803d; border-color:#bbf7d0; }
+
+/* أزرار الهوية */
+.br-btn{
+  font-family:var(--br-font); font-weight:800; font-size:14.5px; cursor:pointer;
+  border:none; border-radius:13px; padding:11px 18px; color:#fff;
+  background:var(--br-grad-blue); box-shadow:var(--br-shadow-blue);
+  transition:transform .15s var(--br-ease), box-shadow .15s var(--br-ease), filter .15s;
+}
+.br-btn:hover{ transform:translateY(-1px); filter:brightness(1.05); }
+.br-btn:active{ transform:translateY(0) scale(.98); }
+.br-btn.candy{ background:var(--br-grad-candy); box-shadow:var(--br-shadow-candy); }
+.br-btn.ghost{
+  background:#fff; color:var(--br-blue-700); box-shadow:none;
+  border:1.5px solid var(--br-blue-100);
+}
+.br-btn.ghost:hover{ background:var(--br-blue-050); }
+
+/* بطاقة هوية */
+.br-card{
+  background:var(--br-paper); border:1px solid var(--br-line); border-radius:var(--br-radius);
+  box-shadow:var(--br-shadow-sm);
+}
+
+/* شريط علوي براندي (زخرفي) */
+.br-topbar-accent{ height:4px; width:100%; background:var(--br-grad-blue); }
+
+/* =========================================================================
+   تنسيقات توحيد آمنة لعناصر قائمة (ترقية المظهر)
+   ========================================================================= */
+
+/* توحيد زر قراءة QR على لمسة الحلوى (بدل البنفسجي الشاذ) */
+.qr-scan-btn{
+  background:var(--br-grad-candy) !important;
+  box-shadow:var(--br-shadow-candy) !important;
+}
+.qr-scan-btn:hover{ filter:brightness(1.05); }
+.qr-scan-frame{ border-color:var(--br-candy-light) !important; }
+.qr-scan-line{ background:linear-gradient(90deg,transparent,var(--br-candy),transparent) !important; }
+.qr-scan-status{ color:var(--br-candy-600) !important; }
+.qr-video-wrap{ box-shadow:inset 0 0 0 2px rgba(255,77,141,.4) !important; }
+
+/* تنسيق شاشة الترحيب (السبلاش) على الهوية الموحّدة */
+.bm-splash .bm-brand{ font-family:var(--br-font-display) !important; }
+.bm-splash .bm-tagline{ color:var(--br-candy-light) !important; }
+
+/* لمسة حلوى خفيفة أسفل شعار السبلاش */
+.bm-logo-wrap{ box-shadow:0 24px 60px -12px rgba(30,78,208,.65), 0 0 0 10px rgba(255,255,255,.06), 0 0 0 1px rgba(255,77,141,.25) !important; }
+
+/* شعار الشركة داخل دائرة تسجيل الدخول */
+.login-logo{ background:#fff !important; padding:12px; overflow:hidden; }
+.login-logo img{ width:100%; height:100%; object-fit:contain; }
+.login-title, #loginTitle{ color:var(--br-blue-700); }
+
+/* طباعة: إخفاء الزخارف */
+@media print{
+  .br-topbar-accent, .qr-scan-btn{ display:none !important; }
+}
+
+/* =========================================================================
+   جسر المتغيرات القديمة → هوية الموحّدة
+   يعيد توجيه ألوان النظام القديمة إلى الأزرق الملكي للشعار (#1e4ed0)
+   دون الحاجة لتعديل كل ملف على حدة. (يجب أن يُحمّل brand.css أخيرًا.)
+   ========================================================================= */
+:root{
+  /* styles.css (شاشة الكاشير الرئيسية) */
+  --primary:#1e4ed0;
+  --primary-dark:#1b3fa8;
+  --primary-light:#eef3fe;
+
+  /* admin.css (لوحة التحكم) */
+  --brand:#1e4ed0;
+  --brand-d:#1b3fa8;
+  --brand-grad:linear-gradient(135deg,#1b3fa8,#1e4ed0);
+  --side-grad:linear-gradient(165deg,#111c3a 0%,#1b3fa8 55%,#1e4ed0 120%);
+}

@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Sweets — نظام الكاشير",
+  "short_name": "Sweets",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "categories": ["business", "food", "productivity"],
+  "background_color": "#0f172a",
+  "theme_color": "#1e4ed0",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

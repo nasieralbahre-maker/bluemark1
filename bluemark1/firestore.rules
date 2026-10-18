@@ -1,0 +1,36 @@
+// ============================================================
+//  قواعد Firestore المطلوبة لعمل الدردشة والمكالمات بين المستخدمين
+//  انسخ هذا المحتوى إلى: Firebase Console ← Firestore Database ← Rules ← Publish
+//
+//  ⚠️ تنبيه أمني: القواعد أدناه مفتوحة بالكامل (لا تتطلب مصادقة)
+//  وتطابق الوضع الحالي للمشروع. للإنتاج الحقيقي يُنصح بشدة
+//  بتفعيل Firebase Authentication وتقييد القواعد بـ request.auth != null.
+// ============================================================
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // الإعدادات والمستخدمون والاستمارات (تحت settings/*)
+    match /settings/{docId} {
+      allow read, write: if true;
+    }
+
+    // الطلبات
+    match /orders/{docId} {
+      allow read, write: if true;
+    }
+
+    // رسائل الدردشة (نص / صور / صوت / سجل المكالمات)
+    match /chat_messages/{docId} {
+      allow read, write: if true;
+    }
+
+    // إشارات المكالمات (WebRTC) ومرشّحات ICE الفرعية
+    match /calls/{callId} {
+      allow read, write: if true;
+      match /{subCol}/{candId} {
+        allow read, write: if true;
+      }
+    }
+  }
+}

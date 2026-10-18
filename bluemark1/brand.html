@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sweets — دليل الهوية البصرية</title>
+<meta name="theme-color" content="#1e4ed0" />
+<link rel="icon" type="image/png" href="icon-192.png" />
+<link rel="stylesheet" href="brand.css" />
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{ font-family:var(--br-font); background:var(--br-bg); color:var(--br-ink); line-height:1.7; }
+  .hero{ background:var(--br-grad-deep); color:#fff; padding:54px 24px 48px; text-align:center; position:relative; overflow:hidden; }
+  .hero::before,.hero::after{ content:""; position:absolute; border-radius:50%; filter:blur(8px); }
+  .hero::before{ width:260px;height:260px; background:radial-gradient(circle,rgba(255,77,141,.35),transparent 70%); top:-80px; left:-60px; }
+  .hero::after{ width:300px;height:300px; background:radial-gradient(circle,rgba(96,165,250,.3),transparent 70%); bottom:-120px; right:-70px; }
+  .hero-mark{ width:116px;height:116px;border-radius:28px;background:#fff;padding:12px;margin:0 auto 18px;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 22px 50px -14px rgba(0,0,0,.5);position:relative;z-index:2; }
+  .hero-mark img{ width:100%;height:100%;object-fit:contain; }
+  .hero h1{ font-family:var(--br-font-display); font-size:46px; letter-spacing:1px; position:relative; z-index:2; }
+  .hero h1 .sw{ color:var(--br-candy-light); }
+  .hero p{ color:var(--br-sky-light); margin-top:8px; letter-spacing:4px; text-transform:uppercase; font-size:13px; position:relative; z-index:2; }
+  .wrap{ max-width:1000px; margin:0 auto; padding:34px 20px 60px; }
+  section{ margin-bottom:40px; }
+  h2.sec{ font-family:var(--br-font-display); font-size:26px; color:var(--br-blue-700); margin-bottom:16px;
+    display:flex; align-items:center; gap:10px; }
+  h2.sec::before{ content:""; width:10px; height:26px; border-radius:4px; background:var(--br-grad-blue); }
+  .grid{ display:grid; gap:14px; }
+  .cols-4{ grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); }
+  .cols-2{ grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); }
+  .swatch{ border-radius:16px; overflow:hidden; box-shadow:var(--br-shadow-sm); background:#fff; }
+  .swatch .chip{ height:92px; display:flex; align-items:flex-end; padding:10px; color:#fff; font-weight:800; font-size:12.5px; text-shadow:0 1px 3px rgba(0,0,0,.3); }
+  .swatch .meta{ padding:10px 12px; }
+  .swatch .meta b{ display:block; font-size:13.5px; }
+  .swatch .meta code{ font-size:12px; color:var(--br-muted); font-family:ui-monospace,monospace; }
+  .card-box{ background:#fff; border:1px solid var(--br-line); border-radius:18px; padding:22px; box-shadow:var(--br-shadow-sm); }
+  .type-row{ display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; padding:12px 0; border-bottom:1px dashed var(--br-line); }
+  .type-row:last-child{ border-bottom:0; }
+  .type-row .lbl{ width:150px; color:var(--br-muted); font-size:13px; }
+  .btns{ display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .foot{ text-align:center; color:var(--br-faint); font-size:12.5px; margin-top:30px; }
+  .rule{ display:flex; gap:12px; padding:12px 14px; border-radius:12px; background:var(--br-blue-050); margin-bottom:10px; }
+  .rule .ic{ font-size:20px; }
+  .rule.bad{ background:var(--br-candy-050); }
+  .pill-row{ display:flex; gap:10px; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-mark"><img src="logo.png" alt="Sweets" /></div>
+  <h1><span class="sw">Sweets</span></h1>
+  <p>Visual Identity System</p>
+</div>
+
+<div class="wrap">
+
+  <section>
+    <h2 class="sec">الألوان الأساسية</h2>
+    <div class="grid cols-4">
+      <div class="swatch"><div class="chip" style="background:#1e4ed0">Royal Blue</div><div class="meta"><b>الأزرق الملكي</b><code>#1E4ED0</code></div></div>
+      <div class="swatch"><div class="chip" style="background:#1b3fa8">Deep Blue</div><div class="meta"><b>الأزرق الغامق</b><code>#1B3FA8</code></div></div>
+      <div class="swatch"><div class="chip" style="background:#152a66">Navy</div><div class="meta"><b>كحلي</b><code>#152A66</code></div></div>
+      <div class="swatch"><div class="chip" style="background:#60a5fa">Sky</div><div class="meta"><b>سماوي</b><code>#60A5FA</code></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">لمسة الحلوى (Accent)</h2>
+    <div class="grid cols-4">
+      <div class="swatch"><div class="chip" style="background:#ff4d8d">Candy</div><div class="meta"><b>وردي حلوى</b><code>#FF4D8D</code></div></div>
+      <div class="swatch"><div class="chip" style="background:#e23b78">Candy Deep</div><div class="meta"><b>وردي غامق</b><code>#E23B78</code></div></div>
+      <div class="swatch"><div class="chip" style="background:#2fd4a7;color:#063b2c">Mint</div><div class="meta"><b>نعناعي</b><code>#2FD4A7</code></div></div>
+      <div class="swatch"><div class="chip" style="background:#f6b73c;color:#4a2f00">Gold</div><div class="meta"><b>ذهبي</b><code>#F6B73C</code></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">الألوان الدلالية</h2>
+    <div class="grid cols-4">
+      <div class="swatch"><div class="chip" style="background:#16a34a">نجاح</div><div class="meta"><b>Success</b><code>#16A34A</code></div></div>
+      <div class="swatch"><div class="chip" style="background:#f59e0b;color:#4a2f00">تنبيه</div><div class="meta"><b>Warning</b><code>#F59E0B</code></div></div>
+      <div class="swatch"><div class="chip" style="background:#dc2626">خطأ</div><div class="meta"><b>Danger</b><code>#DC2626</code></div></div>
+      <div class="swatch"><div class="chip" style="background:#eef2f9;color:#0f172a">خلفية</div><div class="meta"><b>Background</b><code>#EEF2F9</code></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">الخطوط</h2>
+    <div class="card-box">
+      <div class="type-row"><span class="lbl">عنوان براندي (Lalezar)</span><span class="br-display" style="font-size:34px;color:var(--br-blue-700)">Sweets — حلويات</span></div>
+      <div class="type-row"><span class="lbl">عنوان رئيسي (Cairo 800)</span><span style="font-size:24px;font-weight:800">نظام نقطة البيع</span></div>
+      <div class="type-row"><span class="lbl">نص عادي (Cairo 600)</span><span style="font-size:16px;font-weight:600">الأناقة في التفاصيل — تجربة سلسة ونظيفة.</span></div>
+      <div class="type-row"><span class="lbl">نص ثانوي (Cairo 400)</span><span style="font-size:14px;color:var(--br-muted)">وصف وتفاصيل ثانوية بلون أقل حدّة.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">الأزرار والشارات</h2>
+    <div class="card-box">
+      <div class="btns" style="margin-bottom:18px">
+        <button class="br-btn">زر أساسي</button>
+        <button class="br-btn candy">زر الحلوى</button>
+        <button class="br-btn ghost">زر ثانوي</button>
+      </div>
+      <div class="pill-row">
+        <span class="br-badge">🔵 أساسي</span>
+        <span class="br-badge candy">🍬 حلوى</span>
+        <span class="br-badge ok">✔ نجاح</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">شعار العلامة (Lockup)</h2>
+    <div class="card-box" style="display:flex;gap:30px;flex-wrap:wrap;align-items:center">
+      <span class="br-lockup"><img src="logo.png" class="br-mark" alt="Sweets" /><span class="br-name"><span class="br-sweets">Sweets</span></span></span>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">قواعد الاستخدام</h2>
+    <div class="rule"><span class="ic">✅</span><div>استخدم الأزرق الملكي للعناصر الأساسية والأزرار الرئيسية والترويسات.</div></div>
+    <div class="rule"><span class="ic">✅</span><div>اجعل لمسة الحلوى الوردية ثانوية: أزرار مميزة (مثل قراءة QR)، شارات، ولمسات دعائية فقط.</div></div>
+    <div class="rule"><span class="ic">✅</span><div>أبقِ الشعار دائمًا على خلفية بيضاء مع مساحة تنفّس حوله.</div></div>
+    <div class="rule bad"><span class="ic">⛔</span><div>لا تستخدم ألوانًا خارج النظام (مثل البنفسجي السابق) أو تضع الشعار على خلفية مزدحمة.</div></div>
+  </section>
+
+  <div class="foot">Sweets · دليل الهوية البصرية · مبني على brand.css</div>
+</div>
+
+</body>
+</html>
