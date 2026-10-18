@@ -197,6 +197,9 @@ function applyPermissions(){
       ? ((currentUser && currentUser.role === 'مدير') || perms.users === true)
       : (tab === 'printer')
       ? ((currentUser && currentUser.role === 'مدير') || perms.settings === true)
+      // تبويبا إدارة المصاريف وتقارير المصاريف: للمدير فقط
+      : (tab === 'expenses' || tab === 'expreports')
+      ? ((currentUser && currentUser.role === 'مدير') === true)
       : (perms[tab] === true);
     link.style.display = allowed ? '' : 'none';
     if(allowed && !firstAllowed) firstAllowed = tab;
@@ -603,11 +606,19 @@ function fillSettingsForm(cfg){
   set('setVatNo', cfg.vatNo);
   set('setVatRate', Math.round((Number(cfg.vatRate)||0) * 100 * 100) / 100);
   set('setCurrency', cfg.currency || 'YER');
+  set('setUiStyle', cfg.uiStyle || 'old');
   set('setFooter', cfg.footer);
   set('setAlign', p.align || 'center');
-  set('setMarginSide', p.marginSide != null ? p.marginSide : 4);
-  set('setMarginTop', p.marginTop != null ? p.marginTop : 0);
-  set('setPaddingV', p.paddingV != null ? p.paddingV : 6);
+  chk('setLogoSide', !!(p.logoSide === true));
+  // هوامش لكل موضع (مع fallback للقيم القديمة)
+  const _margins = (p.margins && typeof p.margins === 'object') ? p.margins : {};
+  const _defMargin = { top: p.marginTop != null ? p.marginTop : 0, side: p.marginSide != null ? p.marginSide : 4, padV: p.paddingV != null ? p.paddingV : 6 };
+  ['right','center','left'].forEach(function(pos){
+    const mm = _margins[pos] || _defMargin;
+    set('setMarginTop' + pos.charAt(0).toUpperCase() + pos.slice(1), mm.top != null ? mm.top : _defMargin.top);
+    set('setMarginSide' + pos.charAt(0).toUpperCase() + pos.slice(1), mm.side != null ? mm.side : _defMargin.side);
+    set('setPaddingV' + pos.charAt(0).toUpperCase() + pos.slice(1), mm.padV != null ? mm.padV : _defMargin.padV);
+  });
   set('setFontSize', p.fontSize != null ? p.fontSize : 12);
   set('setAutoLockMin', cfg.autoLockMin != null ? cfg.autoLockMin : 5);
   const dsw = document.getElementById('setDataSaver'); if(dsw) dsw.checked = !!cfg.dataSaver;
@@ -677,6 +688,7 @@ document.getElementById('settingsForm').onsubmit = async function(e){
     vatNo:   document.getElementById('setVatNo').value.trim(),
     vatRate: Math.max(0, num('setVatRate', 15)) / 100,
     currency: document.getElementById('setCurrency').value,
+    uiStyle: (document.getElementById('setUiStyle') || {}).value || 'old',
     footer:  document.getElementById('setFooter').value.trim(),
     allowDeposit: document.getElementById('setAllowDeposit').checked,
     directPrint: document.getElementById('setDirectPrint').checked,
@@ -779,13 +791,29 @@ document.getElementById('settingsForm').onsubmit = async function(e){
     // أزرار/أيقونات الواجهة + الدردشة
     ui: collectUiButtons(),
     chatEnabled: !!(document.getElementById('setChatEnabled')||{checked:true}).checked,
-    print: {
-      align:      document.getElementById('setAlign').value,
-      marginSide: Math.max(0, num('setMarginSide', 4)),
-      marginTop:  Math.max(0, num('setMarginTop', 0)),
-      paddingV:   Math.max(0, num('setPaddingV', 6)),
-      fontSize:   Math.max(8, num('setFontSize', 12))
-    }
+    print: (function(){
+      const align = document.getElementById('setAlign').value;
+      const margins = {};
+      ['right','center','left'].forEach(function(pos){
+        const cap = pos.charAt(0).toUpperCase() + pos.slice(1);
+        margins[pos] = {
+          top:  Math.max(0, num('setMarginTop' + cap, 0)),
+          side: Math.max(0, num('setMarginSide' + cap, 4)),
+          padV: Math.max(0, num('setPaddingV' + cap, 6))
+        };
+      });
+      const active = margins[align] || margins.center;
+      return {
+        align: align,
+        logoSide: !!(document.getElementById('setLogoSide') || {}).checked,
+        margins: margins,
+        // للتوافق مع الإصدارات القديمة (تُستخدم كاحتياط)
+        marginSide: active.side,
+        marginTop:  active.top,
+        paddingV:   active.padV,
+        fontSize:   Math.max(8, num('setFontSize', 12))
+      };
+    })()
   };
   try{
     const saved = await DB.saveSettings(cfg);
@@ -1834,7 +1862,7 @@ window.AdminUI = (function(){
     qrSize:'pQrSize', qrGap:'pQrGap', lineGap:'pLineGap',
     colName:'pColName', colQty:'pColQty', colPrice:'pColPrice', colClear:'pColClear'
   };
-  var boolIds = { silent:'pSilent', autoCut:'pAutoCut', cashDrawer:'pCashDrawer' };
+  var boolIds = { silent:'pSilent', autoCut:'pAutoCut', cashDrawer:'pCashDrawer', logoSide:'pLogoSide', qrSide:'pQrSide' };
   var showIds = {
     logo:'pShowLogo', name:'pShowName', establishment:'pShowEstab', invoiceNo:'pShowInvno',
     date:'pShowDate', customer:'pShowCustomer', phone:'pShowPhone', items:'pShowItems',
@@ -2006,6 +2034,62 @@ window.AdminUI = (function(){
       BMSPrinter.save(d); fillForm(d); preview();
       if(typeof showToast==='function') showToast('تمت استعادة الإعدادات الافتراضية');
     };
+    // ===== صندوق إعدادات العنصر المحدد في المعاينة =====
+    var _selTypeLabels = { logo:'الشعار', name:'اسم المنشأة', estab:'بيانات المنشأة', meta:'بيانات الطلب', items:'جدول الأصناف', totals:'الإجماليات', qr:'رمز QR', footer:'التذييل', line:'خط فاصل' };
+    var _selFieldsMap = {
+      logo:   [['logoSide','شعار على يسار (تفعيل/إلغاء)',null],['marginSide','الهامش الجانبي (مم)',0,40,1],['marginTop','الهامش العلوي (مم)',0,60,1],['lineGap','المسافة بين الكتل (px)',0,30,1]],
+      name:   [['fontSize','حجم الخط (px)',8,22,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]],
+      estab:  [['fontSize','حجم الخط (px)',8,22,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]],
+      meta:   [['fontSize','حجم الخط (px)',8,22,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]],
+      items:  [['colName','عرض عمود الصنف (px)',0,200,1],['colQty','عرض عمود الكمية (px)',6,80,1],['colPrice','عرض عمود المبلغ (px)',20,160,1],['colClear','تفراغ يسار (px)',0,60,1],['lineGap','المسافة بين الكتل (px)',0,30,1]],
+      totals: [['fontSize','حجم الخط (px)',8,22,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]],
+      qr:     [['qrSize','حجم رمز QR (px)',40,200,2],['qrGap','المسافة أعلى QR (px)',0,40,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['qrSide','QR على يمين (تفعيل/إلغاء)',null]],
+      footer: [['fontSize','حجم الخط (px)',8,22,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]],
+      line:   [['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]]
+    };
+    var _keyToId = {
+      marginSide:'pMarginSide', marginTop:'pMarginTop', marginBottom:'pMarginBottom',
+      fontSize:'pFontSize', lineGap:'pLineGap', qrSize:'pQrSize', qrGap:'pQrGap',
+      colName:'pColName', colQty:'pColQty', colPrice:'pColPrice', colClear:'pColClear',
+      logoSide:'pLogoSide', qrSide:'pQrSide'
+    };
+    function _addField(key, label, min, max, step){
+      var srcId = _keyToId[key] || key;
+      var src = $(srcId); if(!src) return;
+      var fields = $('pSelFields'); if(!fields) return;
+      var wrap = document.createElement('label');
+      wrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#334155;min-width:100px';
+      var span = document.createElement('span'); span.textContent = label;
+      var inp;
+      if(src.type === 'checkbox'){
+        inp = document.createElement('input'); inp.type='checkbox';
+        inp.checked = src.checked;
+        inp.style.cssText = 'width:18px;height:18px;accent-color:#2563eb';
+        inp.addEventListener('change', function(){ src.checked = inp.checked; src.dispatchEvent(new Event('change',{bubbles:true})); preview(); });
+      } else {
+        inp = document.createElement('input'); inp.type='number';
+        if(min!=null) inp.min=min; if(max!=null) inp.max=max; if(step!=null) inp.step=step;
+        inp.value = src.value;
+        inp.style.cssText = 'border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 8px;font-family:inherit;font-size:13px;background:#f8fafc;width:100%';
+        inp.addEventListener('input', function(){ src.value = inp.value; src.dispatchEvent(new Event('input',{bubbles:true})); preview(); });
+      }
+      src.addEventListener('input', function(){ if(inp.type!=='checkbox') inp.value = src.value; });
+      src.addEventListener('change', function(){ if(inp.type==='checkbox') inp.checked = src.checked; else inp.value = src.value; });
+      wrap.appendChild(span); wrap.appendChild(inp);
+      fields.appendChild(wrap);
+    }
+    window.bmsOnPreviewSelect = function(type){
+      var panel = $('pSelPanel'); if(!panel) return;
+      var title = $('pSelTitle'); if(title) title.textContent = 'إعدادات: ' + (_selTypeLabels[type] || type);
+      var fields = $('pSelFields'); if(fields) fields.innerHTML = '';
+      var list = _selFieldsMap[type] || [];
+      list.forEach(function(f){ _addField(f[0], f[1], f[2], f[3], f[4]); });
+      panel.style.display = '';
+    };
+    window.bmsOnPreviewDeselect = function(){
+      var panel = $('pSelPanel'); if(panel) panel.style.display = 'none';
+    };
+
     // تحديث المعاينة والطابعات عند فتح تبويب الطابعة
     var link = document.querySelector('.side-link[data-tab="printer"]');
     if(link) link.addEventListener('click', function(){ setTimeout(function(){ preview(); refreshPrinters(); }, 30); });

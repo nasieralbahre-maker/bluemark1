@@ -535,6 +535,7 @@ body.admin-dark .settings-subhead{color:var(--ink);}
 
 </style>
 <link rel="stylesheet" href="brand.css" />
+  <link rel="stylesheet" href="theme-new.css" />
 </head>
 <body class="admin-body">
 
@@ -566,6 +567,8 @@ body.admin-dark .settings-subhead{color:var(--ink);}
       <button class="side-link" data-tab="settings">⚙️ الإعدادات</button>
       <button class="side-link" data-tab="users">👥 المستخدمون</button>
       <button class="side-link" data-tab="signups">🆕 طلبات الحساب <span class="side-badge" id="signupBadge" style="display:none">0</span></button>
+      <button class="side-link" data-tab="expenses">💰 إدارة المصاريف <span class="side-badge" id="expBadge" style="display:none">0</span></button>
+      <button class="side-link" data-tab="expreports">📊 تقارير المصاريف</button>
       <button class="side-link" data-tab="printer">🖨️ إعدادات الطابعة</button>
     </nav>
     <div class="side-foot">
@@ -1118,6 +1121,124 @@ body.admin-dark .settings-subhead{color:var(--ink);}
       </div>
     </section>
 
+    <!-- ===== تبويب إدارة المصاريف ===== -->
+    <section class="tab" id="tab-expenses">
+      <div class="tab-head">
+        <h2>💰 إدارة المصاريف</h2>
+        <div class="tab-head-actions">
+          <button class="btn-sm" id="expRefreshBtn">🔄 تحديث</button>
+        </div>
+      </div>
+      <p class="settings-hint" style="margin:0 0 12px">طلبات المبالغ الواردة من المستخدمين. راجع كل طلب: قبول (كامل أو جزئي) مع تسجيل المبلغ المسلَّم، رفض مع السبب، أو إعادة للمراجعة. لا يُسجَّل المبلغ كمستلَم إلا بعد تأكيد المستخدم نفسه.</p>
+
+      <!-- إشعارات المدير (تأكيدات الاستلام وإشعارات الطلبات) -->
+      <div id="expNotices"></div>
+
+      <!-- أدوات البحث والتصفية -->
+      <div class="exp-toolbar">
+        <input type="search" id="expSearch" placeholder="🔍 بحث باسم المستخدم / السبب / رقم الطلب" />
+        <select id="expStatus">
+          <option value="">كل الحالات</option>
+          <option value="pending">بانتظار المراجعة</option>
+          <option value="approved">معتمد للصرف</option>
+          <option value="partial">تم التسليم جزئيًا</option>
+          <option value="received">تم تأكيد الاستلام</option>
+          <option value="rejected">مرفوض</option>
+          <option value="returned">أعيد للمراجعة</option>
+        </select>
+        <select id="expCur">
+          <option value="">كل العملات</option>
+          <option value="SAR">🇸🇦 ريال سعودي (ر.س)</option>
+          <option value="YER">🇾🇪 ريال يمني (ر.ي)</option>
+        </select>
+        <label class="exp-date-lbl">من <input type="date" id="expFrom" /></label>
+        <label class="exp-date-lbl">إلى <input type="date" id="expTo" /></label>
+        <button class="btn-sm" id="expClearFilters">✕ مسح التصفية</button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table" id="expTable">
+          <thead><tr>
+            <th>مقدم الطلب</th><th>المبلغ المطلوب</th><th>العملة</th><th>السبب</th>
+            <th>التاريخ والوقت</th><th>الحالة</th><th>المُسلَّم</th><th>المتبقي</th>
+            <th>ملاحظات</th><th>إجراءات</th>
+          </tr></thead>
+          <tbody id="expBody"></tbody>
+        </table>
+      </div>
+      <div id="expEmpty" class="exp-empty" style="display:none">لا توجد طلبات مصاريف مطابقة</div>
+    </section>
+
+    <!-- ===== تبويب تقارير المصاريف ===== -->
+    <section class="tab" id="tab-expreports">
+      <div class="tab-head">
+        <h2>📊 تقارير المصاريف</h2>
+        <div class="tab-head-actions">
+          <select id="expRepRange">
+            <option value="week">تقرير أسبوعي</option>
+            <option value="month">تقرير شهري</option>
+            <option value="year">تقرير سنوي</option>
+            <option value="custom">فترة مخصصة</option>
+          </select>
+          <label class="exp-date-lbl" id="expRepCustomWrap" style="display:none">من <input type="date" id="expRepFrom" /></label>
+          <label class="exp-date-lbl" id="expRepCustomWrap2" style="display:none">إلى <input type="date" id="expRepTo" /></label>
+        </div>
+      </div>
+      <p class="settings-hint" style="margin:0 0 10px">
+        يُحدَّث التقرير تلقائياً عند اختيار الفترة — دون إعادة تحميل الصفحة.
+        بداية الأسبوع تُحدَّد من إعدادات النظام:
+        <select id="expRepWeekStart" class="exp-inline-select">
+          <option value="0">الأحد</option><option value="1">الاثنين</option><option value="2">الثلاثاء</option>
+          <option value="3">الأربعاء</option><option value="4">الخميس</option><option value="5">الجمعة</option>
+          <option value="6">السبت</option>
+        </select>
+      </p>
+      <div class="exp-range-box" id="expRepRangeLbl">—</div>
+
+      <div class="ex-rep-users">
+        <div class="ex-rep-users-head">👥 المستخدمون المُدرَجون في التقرير:
+          <button type="button" class="exp-btn det" id="expUsersAll">تحديد الكل</button>
+          <button type="button" class="exp-btn det" id="expUsersNone">إلغاء الكل</button>
+        </div>
+        <div class="ex-rep-users-list" id="expRepUsersSel"></div>
+        <div id="expRepUsersSelHint" style="font-size:12px;color:#94a3b8;font-weight:700;margin-top:6px"></div>
+      </div>
+      <button type="button" class="exp-pdf-btn" id="expRepPdfBtn">📄 تصدير تقرير PDF</button>
+
+      <!-- الإجماليات (مفصولتان حسب العملة) -->
+      <div id="expRepSummary" class="exp-sum-grid"></div>
+
+      <!-- الجدول التفصيلي -->
+      <div class="panel-like">
+        <div class="panel-like-head"><h3>📑 تفاصيل طلبات الفترة</h3></div>
+        <div class="table-wrap">
+          <table class="data-table" id="expRepTable">
+            <thead><tr>
+              <th>#</th><th>المستخدم</th><th>المبلغ المطلوب</th><th>العملة</th><th>السبب</th>
+              <th>التاريخ</th><th>الحالة</th><th>المُسلَّم</th><th>المتبقي</th><th>التفاصيل</th>
+            </tr></thead>
+            <tbody id="expRepBody"></tbody>
+          </table>
+        </div>
+        <div id="expRepEmpty" class="exp-empty" style="display:none">لا توجد طلبات في هذه الفترة</div>
+      </div>
+
+      <div class="exp-breakdowns">
+        <div class="panel-like">
+          <div class="panel-like-head"><h3>👤 تفاصيل حسب المستخدم</h3></div>
+          <div id="expRepUsers" class="exp-break-list"></div>
+        </div>
+        <div class="panel-like">
+          <div class="panel-like-head"><h3>📝 تفاصيل حسب السبب</h3></div>
+          <div id="expRepReasons" class="exp-break-list"></div>
+        </div>
+        <div class="panel-like">
+          <div class="panel-like-head"><h3>📅 تفاصيل حسب التاريخ والعملة</h3></div>
+          <div id="expRepDates" class="exp-break-list"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- Printer settings tab -->
     <section class="tab" id="tab-printer">
       <div class="tab-head"><h2>🖨️ إعدادات الطابعة</h2></div>
@@ -1214,19 +1335,46 @@ body.admin-dark .settings-subhead{color:var(--ink);}
           <div class="settings-card">
             <h3>⚙️ إعدادات مشتركة للمؤسسة (تُحفظ للجميع)</h3>
             <small class="settings-hint" style="margin-bottom:8px;display:block">تؤثر على موضع الفاتورة المخزّن في النظام (لكل الأجهزة). تُحفظ مع زر «حفظ الإعدادات» أدناه.</small>
-            <label>موقع الفاتورة على الورقة
+            <label>شكل النظام
+              <select id="setUiStyle">
+                <option value="old">الشكل القديم</option>
+                <option value="new">الشكل الجديد (قوي وجذاب)</option>
+              </select>
+            </label>
+            <label>موقع الفاتورة على ورقة A4
               <select id="setAlign">
                 <option value="right">يمين</option>
                 <option value="center">وسط</option>
                 <option value="left">يسار</option>
               </select>
             </label>
-            <div class="form-row">
-              <label>الهامش الجانبي (مم)<input type="number" id="setMarginSide" min="0" max="40" step="1" /></label>
-              <label>الهامش العلوي (مم)<input type="number" id="setMarginTop" min="0" max="60" step="1" /></label>
+            <label class="check-row"><input type="checkbox" id="setLogoSide" /> شعار على يسار الفاتورة (بجانب بيانات المنشأة — بدل أن يأخذ مساحة أولاً)</label>
+            <small class="settings-hint" style="margin:6px 0 10px;display:block">حدد الهوامش لكل موضع على حدة — سيُطبَّق موضع الفاتورة (يمين/وسط/يسار) مع هوامشه المخصّصة.</small>
+            <div class="settings-card" style="background:#f8fafc;margin:8px 0">
+              <h3 style="font-size:13px;margin:0 0 8px">يمين</h3>
+              <div class="form-row">
+                <label>الهامش العلوي (مم)<input type="number" id="setMarginTopRight" min="0" max="60" step="1" /></label>
+                <label>الهامش الجانبي (مم)<input type="number" id="setMarginSideRight" min="0" max="40" step="1" /></label>
+              </div>
+              <label>الحشو الرأسي (مم)<input type="number" id="setPaddingVRight" min="0" max="40" step="1" /></label>
+            </div>
+            <div class="settings-card" style="background:#f8fafc;margin:8px 0">
+              <h3 style="font-size:13px;margin:0 0 8px">وسط</h3>
+              <div class="form-row">
+                <label>الهامش العلوي (مم)<input type="number" id="setMarginTopCenter" min="0" max="60" step="1" /></label>
+                <label>الهامش الجانبي (مم)<input type="number" id="setMarginSideCenter" min="0" max="40" step="1" /></label>
+              </div>
+              <label>الحشو الرأسي (مم)<input type="number" id="setPaddingVCenter" min="0" max="40" step="1" /></label>
+            </div>
+            <div class="settings-card" style="background:#f8fafc;margin:8px 0">
+              <h3 style="font-size:13px;margin:0 0 8px">يسار</h3>
+              <div class="form-row">
+                <label>الهامش العلوي (مم)<input type="number" id="setMarginTopLeft" min="0" max="60" step="1" /></label>
+                <label>الهامش الجانبي (مم)<input type="number" id="setMarginSideLeft" min="0" max="40" step="1" /></label>
+              </div>
+              <label>الحشو الرأسي (مم)<input type="number" id="setPaddingVLeft" min="0" max="40" step="1" /></label>
             </div>
             <div class="form-row">
-              <label>الحشو الرأسي (مم)<input type="number" id="setPaddingV" min="0" max="40" step="1" /></label>
               <label>حجم الخط (px)<input type="number" id="setFontSize" min="8" max="20" step="1" /></label>
             </div>
           </div>
@@ -1252,6 +1400,13 @@ body.admin-dark .settings-subhead{color:var(--ink);}
           </div>
 
           <div class="settings-card">
+            <h3>🖼️ موضع الشعار ورمز QR (معاينة حية)</h3>
+            <small class="settings-hint" style="margin-bottom:8px;display:block">تُطبَّق على المعاينة الحية أدناه فوراً. الشعار دائري على يسار الفاتورة (بجانب بيانات المنشأة) ورمز QR على يمين الفاتورة (بجانب بياناته).</small>
+            <label class="check-row"><input type="checkbox" id="pLogoSide" /> شعار دائري على يسار الفاتورة (بجانب بيانات المنشأة)</label>
+            <label class="check-row"><input type="checkbox" id="pQrSide" /> رمز QR على يمين الفاتورة (بجانب بياناته)</label>
+          </div>
+
+          <div class="settings-card">
             <div class="printer-actions" style="display:flex;flex-wrap:wrap;gap:10px">
               <button type="button" class="btn primary" id="pAutoSetupBtn" style="background:linear-gradient(135deg,#15803d,#22c55e)">⚙️ ضبط تلقائي للطابعة</button>
               <button type="button" class="btn primary" id="pSaveBtn">💾 حفظ الإعدادات</button>
@@ -1265,6 +1420,12 @@ body.admin-dark .settings-subhead{color:var(--ink);}
           <div class="settings-card" style="position:sticky;top:12px">
             <h3>👁️ معاينة حية</h3>
             <div id="pPreview" style="background:#e9edf3;padding:14px;border-radius:8px;max-height:65vh;overflow:auto;display:flex;justify-content:center"></div>
+            <small class="settings-hint" style="display:block;margin-top:8px">💡 معاينة حية: اسحب الشعار أو رمز QR لتغيير موضعه — أو انقر على أي عنصر لإظهار إعداداته في الصندوق أدناه.</small>
+            <div id="pSelPanel" style="display:none;margin-top:10px;padding:10px;background:#f0f9ff;border:1px solid #bfdbfe;border-radius:8px">
+              <div id="pSelTitle" style="font-weight:800;color:#1e3a8a;margin-bottom:6px;font-size:13px">—</div>
+              <div id="pSelFields" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+              <small class="settings-hint" style="display:block;margin-top:6px">انقر على عنصر في المعاينة لعرض إعداداته. التعديلات تُحدِّث المعاينة فوراً.</small>
+            </div>
           </div>
         </div>
       </div>
@@ -1346,6 +1507,74 @@ body.admin-dark .settings-subhead{color:var(--ink);}
   </div>
 </div>
 
+<!-- ===== نوافذ إدارة المصاريف ===== -->
+<!-- قبول / صرف مبلغ -->
+<div class="modal" id="expApproveModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>✅ قبول طلب المصروف</h3>
+      <button class="close-btn" id="closeExpApprove">✕</button>
+    </div>
+    <form id="expApproveForm">
+      <div class="exp-mrec" id="expApproveRec"></div>
+      <label>المبلغ الذي سيُسلَّم فعليًا
+        <input type="text" id="expApproveAmount" inputmode="decimal" autocomplete="off" placeholder="0.00" required />
+      </label>
+      <small class="exp-hint" id="expApproveHint">أدخل كاملاً أو جزئياً — العملة مثبّتة كما في طلب المستخدم</small>
+      <div class="exp-approve-preview" id="expApprovePreview"></div>
+      <div class="exp-err" id="expApproveErr"></div>
+      <button type="submit" class="btn btn-primary btn-block">✔ تأكيد الصرف</button>
+    </form>
+  </div>
+</div>
+
+<!-- رفض الطلب -->
+<div class="modal" id="expRejectModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>❌ رفض طلب المصروف</h3>
+      <button class="close-btn" id="closeExpReject">✕</button>
+    </div>
+    <form id="expRejectForm">
+      <div class="exp-mrec" id="expRejectRec"></div>
+      <label>سبب الرفض
+        <textarea id="expRejectReason" maxlength="300" placeholder="اكتب سبب الرفض ليصل للمستخدم..." required></textarea>
+      </label>
+      <div class="exp-err" id="expRejectErr"></div>
+      <button type="submit" class="btn btn-primary btn-block">✔ تأكيد الرفض</button>
+    </form>
+  </div>
+</div>
+
+<!-- إعادة الطلب للمراجعة -->
+<div class="modal" id="expReturnModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>↩️ إعادة الطلب للمراجعة</h3>
+      <button class="close-btn" id="closeExpReturn">✕</button>
+    </div>
+    <form id="expReturnForm">
+      <div class="exp-mrec" id="expReturnRec"></div>
+      <label>ملاحظة توضح المطلوب تعديله (اختياري)
+        <textarea id="expReturnNote" maxlength="300" placeholder="مثال: قلّل المبلغ أو أضف تفاصيل أكثر..."></textarea>
+      </label>
+      <div class="exp-err" id="expReturnErr"></div>
+      <button type="submit" class="btn btn-primary btn-block">↩ إعادة للمراجعة</button>
+    </form>
+  </div>
+</div>
+
+<!-- تفاصيل الطلب وسجل مراحله -->
+<div class="modal" id="expDetailModal">
+  <div class="modal-box" style="max-width:640px">
+    <div class="modal-head">
+      <h3>📂 تفاصيل طلب المصروف وسجل مراحله</h3>
+      <button class="close-btn" id="closeExpDetail">✕</button>
+    </div>
+    <div id="expDetailBody" class="exp-detail-body"></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <!-- عنصر الفاتورة للطباعة التجريبية (مخفي على الشاشة) -->
 <div id="receipt" class="receipt" style="display:none"></div>
@@ -1356,6 +1585,7 @@ body.admin-dark .settings-subhead{color:var(--ink);}
 <script src="db.js"></script>
 <script src="printer.js"></script>
 <script src="admin.js"></script>
+<script src="expenses-admin.js?v=1"></script>
 <script>
 /* توسيع / طي القائمة الزرقاء على الجوال */
 (function(){

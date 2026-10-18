@@ -156,6 +156,7 @@ const DB = (function(){
       button: 100,   // الأزرار
       input: 100     // حقول الإدخال
     },
+    uiStyle: 'old', // 'old' | 'new' — شكل النظام
     // ----- إعدادات الفاتورة المتقدمة (مستقلة عن الطباعة) -----
     invoice: {
       fontHeading: 18,   // حجم خط اسم المتجر/العنوان
@@ -185,11 +186,20 @@ const DB = (function(){
       title: '',                // عنوان مخصّص (اختياري)
       subtitle: ''              // نص فرعي مخصّص (اختياري)
     },
-    print: { align:'center', marginTop:0, marginSide:4, paddingV:6, fontSize:12 }
+    print: { align:'center', logoSide:false, marginTop:0, marginSide:4, paddingV:6, fontSize:12,
+      margins: { right:{top:0,side:4,padV:6}, center:{top:0,side:4,padV:6}, left:{top:0,side:4,padV:6} } },
+    // ----- بداية الأسبوع في تقارير المصاريف (0=الأحد ... 6=السبت) -----
+    weekStartDay: 6
   };
   function mergeSettings(s){
     const out = Object.assign({}, DEFAULT_SETTINGS, s || {});
     out.print = Object.assign({}, DEFAULT_SETTINGS.print, (s && s.print) || {});
+  // دمج هوامش كل موضع (A4) بعمق
+  const _mIn = (s && s.print && s.print.margins) || {};
+  out.print.margins = Object.assign({}, DEFAULT_SETTINGS.print.margins);
+  ['right','center','left'].forEach(function(pos){
+    out.print.margins[pos] = Object.assign({}, DEFAULT_SETTINGS.print.margins[pos], (_mIn[pos] || {}));
+  });
     out.custForm = Object.assign({}, DEFAULT_SETTINGS.custForm, (s && s.custForm) || {});
     out.fonts = Object.assign({}, DEFAULT_SETTINGS.fonts, (s && s.fonts) || {});
     out.invoice = Object.assign({}, DEFAULT_SETTINGS.invoice, (s && s.invoice) || {});
@@ -767,6 +777,162 @@ const DB = (function(){
     return () => window.removeEventListener('storage', handler);
   }
 
+  // =================== طلبات المصاريف (EXPENSES) ===================
+  // تُحفظ كقائمة داخل مستند settings/expenses (يعمل سحابياً ومحلياً) — دون إنشاء مجموعة جديدة.
+  // كل طلب: {id, userId, userName, amount, currency:'SAR'|'YER', reason, note,
+  //   createdAt, dateStr, timeStr,
+  //   status:'pending'|'returned'|'approved'|'partial'|'received'|'rejected',
+  //   paid (المبلغ المسلَّم فعلياً تراكمياً), approvedBy, approvedByName, approvedAt,
+  //   rejectReason, rejectedBy, rejectedAt, returnNote, returnedBy, returnedAt,
+  //   receivedAt, receivedBy, receivedByName,
+  //   adminNotice:{text, ts, read}, log:[{ts, by, byName, action, detail}]}
+  var EXPENSES_KEY = 'expenses_requests';
+  var EXPENSES_MAX = 500;               // سقف عدد الطلبات المحفوظة (يُترك الأحدث)
+  const EXP_STATUS_LABEL = {
+    pending:  'بانتظار المراجعة',
+    returned: 'أعيد للمراجعة',
+    approved: 'معتمد للصرف',
+    partial:  'تم التسليم جزئيًا',
+    received: 'تم تأكيد الاستلام',
+    rejected: 'مرفوض'
+  };
+  const EXP_CURRENCIES = {
+    SAR: { code:'SAR', name:'ريال سعودي', symbol:'ر.س', flag:'🇸🇦' },
+    YER: { code:'YER', name:'ريال يمني',  symbol:'ر.ي', flag:'🇾🇪' }
+  };
+  // تنسيق مبلغ بالعملة مع فواصل الآلاف: 1,500.00 ر.س — لا أي تحويل بين العملات
+  function fmtExpMoney(n, currency){
+    const v = Number(n);
+    const s = new Intl.NumberFormat('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 })
+                .format(isFinite(v) ? v : 0);
+    return s + ' ' + (currency === 'YER' ? 'ر.ي' : 'ر.س');
+  }
+  // تاريخ محلي بصيغة YYYY-MM-DD (حسب تقويم الجهاز)
+  function expDateStr(ts){
+    const d = new Date(ts || Date.now());
+    const p = n => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate());
+  }
+  function expTimeStr(ts){
+    const d = new Date(ts || Date.now());
+    const p = n => String(n).padStart(2, '0');
+    return p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  // سجل إجراء داخل طلب المصروف
+  function expLog(rec, by, byName, action, detail){
+    rec.log = Array.isArray(rec.log) ? rec.log : [];
+    rec.log.push({ ts: Date.now(), by: by||'', byName: byName||'', action: action||'', detail: detail||'' });
+    return rec;
+  }
+
+  function lsExpenses(){ try{ return JSON.parse(localStorage.getItem(EXPENSES_KEY)||'[]'); }catch(e){ return []; } }
+  function lsSaveExpenses(a){ try{ localStorage.setItem(EXPENSES_KEY, JSON.stringify(a)); }catch(e){} }
+  // مشتركون محليون (نفس الصفحة) لتحديث الواجهة فوراً في وضع localStorage
+  const _expSubs = [];
+  function notifyExpSubs(){ const data = lsExpenses(); _expSubs.forEach(fn => { try{ fn(data); }catch(e){} }); }
+
+  async function getExpenses(){
+    if(useFB()){
+      try{
+        const doc = await withTimeout(window.fbdb.collection('settings').doc('expenses').get(), 5000);
+        return (doc.exists && Array.isArray(doc.data().list)) ? doc.data().list : [];
+      }catch(e){ console.warn('[DB] تعذر جلب طلبات المصاريف:', e.message); return []; }
+    }
+    return lsExpenses();
+  }
+  async function addExpense(rec){
+    rec.id = rec.id || ('exp_' + Date.now() + '_' + Math.floor(Math.random()*10000));
+    rec.createdAt = rec.createdAt || Date.now();
+    rec.dateStr = rec.dateStr || expDateStr(rec.createdAt);
+    rec.timeStr = rec.timeStr || expTimeStr(rec.createdAt);
+    rec.status = rec.status || 'pending';
+    rec.paid = Number(rec.paid) || 0;
+    rec.log = Array.isArray(rec.log) ? rec.log : [];
+    if(useFB()){
+      const ref = window.fbdb.collection('settings').doc('expenses');
+      try{
+        // معاملة على مستند واحد: قراءة+إضافة داخل عملية واحدة (حماية ضد التزامن)
+        await window.fbdb.runTransaction(async tx => {
+          const snap = await tx.get(ref);
+          const list = (snap.exists && Array.isArray(snap.data().list)) ? snap.data().list : [];
+          list.push(rec);
+          tx.set(ref, { list: list.slice(-EXPENSES_MAX) });
+        });
+      }catch(e){
+        // بدون إنترنت: كتابة مباشرة تُزامَن لاحقاً عبر الكاش المحلي
+        console.warn('[DB] addExpense (بدون معاملة):', e.message);
+        const snap = await ref.get().catch(() => null);
+        const list = (snap && snap.exists && Array.isArray(snap.data().list)) ? snap.data().list.slice() : [];
+        list.push(rec);
+        await ref.set({ list: list.slice(-EXPENSES_MAX) }).catch(err => { console.warn('[DB] addExpense:', err.message); });
+      }
+    } else {
+      const list = lsExpenses(); list.push(rec);
+      lsSaveExpenses(list.slice(-EXPENSES_MAX)); notifyExpSubs();
+    }
+    return rec;
+  }
+  // تنفيذ إجراء (اعتماد/رفض/إعادة/تأكيد استلام) بحماية ضد التكرار:
+  //   guard(rec) => true إذا جاز التنفيذ، أو نص سبب الرفض
+  //   patch(rec) => التعديلات المطبَّقة
+  async function actExpense(id, guard, patch){
+    if(useFB()){
+      const ref = window.fbdb.collection('settings').doc('expenses');
+      try{
+        return await window.fbdb.runTransaction(async tx => {
+          const snap = await tx.get(ref);
+          const list = (snap.exists && Array.isArray(snap.data().list)) ? snap.data().list : [];
+          const i = list.findIndex(x => x && x.id === id);
+          if(i === -1) return { ok:false, reason:'not_found' };
+          const g = guard(list[i]);
+          if(g !== true) return { ok:false, reason:(typeof g === 'string' ? g : 'blocked'), rec:list[i] };
+          const updated = Object.assign({}, list[i], patch(list[i]), { updatedAt: Date.now() });
+          list[i] = updated;
+          tx.set(ref, { list: list.slice(-EXPENSES_MAX) });
+          return { ok:true, rec: updated };
+        });
+      }catch(e){
+        // فشل المعاملة (غالباً انقطاع الإنترنت): تنفيذ بأفضل جهد ممكن على آخر نسخة معروفة
+        console.warn('[DB] actExpense (بدون معاملة):', e.message);
+        const list = await getExpenses().catch(() => []);
+        const i = list.findIndex(x => x && x.id === id);
+        if(i === -1) return { ok:false, reason:'not_found' };
+        const g = guard(list[i]);
+        if(g !== true) return { ok:false, reason:(typeof g === 'string' ? g : 'blocked'), rec:list[i] };
+        const updated = Object.assign({}, list[i], patch(list[i]), { updatedAt: Date.now() });
+        list[i] = updated;
+        try{ await ref.set({ list: list.slice(-EXPENSES_MAX) }); }
+        catch(err){ return { ok:false, reason:'error' }; }
+        return { ok:true, rec: updated };
+      }
+    }
+    // محلي (نفس الجهاز)
+    const list = lsExpenses();
+    const i = list.findIndex(x => x && x.id === id);
+    if(i === -1) return { ok:false, reason:'not_found' };
+    const g = guard(list[i]);
+    if(g !== true) return { ok:false, reason:(typeof g === 'string' ? g : 'blocked'), rec:list[i] };
+    const updated = Object.assign({}, list[i], patch(list[i]), { updatedAt: Date.now() });
+    list[i] = updated;
+    lsSaveExpenses(list); notifyExpSubs();
+    return { ok:true, rec: updated };
+  }
+  function onExpenses(cb){
+    if(useFB()){
+      return window.fbdb.collection('settings').doc('expenses').onSnapshot(doc => {
+        cb((doc.exists && Array.isArray(doc.data().list)) ? doc.data().list : []);
+      });
+    }
+    cb(lsExpenses());
+    _expSubs.push(cb);
+    const handler = e => { if(e.key === EXPENSES_KEY) cb(lsExpenses()); };
+    window.addEventListener('storage', handler);
+    return () => {
+      const i = _expSubs.indexOf(cb); if(i >= 0) _expSubs.splice(i, 1);
+      window.removeEventListener('storage', handler);
+    };
+  }
+
   // =================== الدردشة الداخلية (CHAT) ===================
   // مجموعة Firestore حقيقية 'chat_messages' (تدعم الزمن الفعلي)، وبديل محلي.
   // رسالة: {id, user, name, type:'text'|'image'|'voice'|'call', text, data(dataURL), dur, createdAt}
@@ -849,6 +1015,9 @@ const DB = (function(){
     getCustForms, addCustForm, updateCustForm, deleteCustForm, onCustForms, getCustFormByToken,
     getOrderForms, addOrderForm, getOrderFormByToken, updateOrderForm, deleteOrderForm, onOrderForms,
     getOrderSubs, addOrderSub, updateOrderSub, onOrderSubs, genToken,
+    // ===== طلبات المصاريف =====
+    getExpenses, addExpense, actExpense, onExpenses, expLog,
+    EXP_STATUS_LABEL, EXP_CURRENCIES, fmtExpMoney, expDateStr, expTimeStr,
     // ===== الدردشة والمكالمات =====
     getChatMessages, addChatMessage, onChatMessages, clearChat, purgeChatBefore
   };

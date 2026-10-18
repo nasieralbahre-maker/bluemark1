@@ -1,4 +1,4 @@
-/* ============================================================
+﻿/* ============================================================
    BMSPrinter — محرّك إعدادات طابعة الكاشير الحرارية (POS 58/80mm)
    - تُحفظ الإعدادات محلياً على الجهاز (localStorage) لأنها خاصة بكل طابعة.
    - يُنتج CSS طباعة ديناميكي (@page + #receipt) يعالج:
@@ -8,10 +8,10 @@
    ============================================================ */
 (function(){
   var KEY = 'bms_printer_cfg';
-  var VERSION = 2;           // لترقية الإعدادات القديمة المحفوظة إلى الافتراضي الموصى به (طابعة POS 80مم)
+  var VERSION = 2;           // لترقية الإعدادات القديمة المحفوظة إلى الافتراضي الموصى به (طابعة POS 80mm)
   var defaults = {
     _v: VERSION,             // إصدار الإعدادات
-    paperWidth: 80,          // عرض الورق (مم) — حرّ (مثال 58؁60؁72؁80مم أو أي قيمة)
+    paperWidth: 80,          // عرض الورق (مم) — حرّ (مثال 58/60/72/80مم أو أي قيمة)
     paperHeight: 0,          // ارتفاع الورق (مم)؛ 0 = تلقائي (يقص بعد آخر سطر)
     marginTop: 0,            // مم
     marginBottom: 0,         // مم
@@ -19,6 +19,8 @@
     fontSize: 12,            // px
     fontFamily: 'cairo',     // cairo | tahoma | monospace
     align: 'center',         // right | center | left
+    logoSide: false,          // شعار دائري على يسار الفاتورة (بجانب بيانات المنشأة)
+    qrSide: false,           // رمز QR على يمين الفاتورة (بجانب بياناته)
     defaultPrinter: '',      // اسم الطابعة الافتراضية (للجسر الأصلي/للتذكير)
     copies: 1,               // عدد النسخ
     silent: true,           // طباعة مباشرة دون معاينة (إن دعمها الجهاز)
@@ -45,7 +47,7 @@
 
   function clone(o){ return JSON.parse(JSON.stringify(o)); }
   function num(v,d){ var n=parseFloat(v); return isNaN(n)?d:n; }
-  function esc(s){ return String(s==null?'':s).replace(/[&<>\"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c];}); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 
   function load(){
     try{
@@ -55,7 +57,7 @@
       var o = JSON.parse(raw) || {};
       var merged = Object.assign(d, o);
       merged.show = Object.assign(clone(defaults.show), (o.show||{}));
-      // ترقية الإعدادات القديمة المحفوظة (قبل نظام الإصدارات) إلى الافتراضي الموصى به لطابعة 80مم
+      // ترقية الإعدادات القديمة المحفوظة (قبل نظام الإصدارات) إلى الافتراضي الموصى به لطابعة 80mm
       if((parseInt(o._v,10)||0) < VERSION){
         merged._v = VERSION;
         merged.paperWidth = 80;
@@ -153,7 +155,7 @@
     css +=   '#receipt table th:first-child,#receipt table td:first-child{'+nameCss+'text-align:right!important;}';
     css +=   '#receipt table th.c,#receipt table td.c{width:'+qtyW+'px!important;text-align:center!important;white-space:nowrap!important;}';
     css +=   '#receipt table th.l,#receipt table td.l{width:'+priceW+'px!important;text-align:left!important;word-break:break-all!important;}';
-    // خيارات احتياطية متعددة لكسر الأرقام/الكلمات الطويلة — حتى تعمل على المتصفّحات/WebView القديمة
+    // خيارات احتياطية متعددة لكسر الأرقام/الكلمات الطويلة — حتى تعمل على المتصفحات/WebView القديمة
     // التي لا تدعم overflow-wrap:anywhere
     css +=   '#receipt table td,#receipt table th{word-break:break-word!important;word-wrap:break-word!important;overflow-wrap:break-word!important;overflow-wrap:anywhere!important;white-space:normal!important;max-width:100%!important;}';
     css +=   '#receipt .r-tot{flex-wrap:wrap!important;}';
@@ -194,10 +196,21 @@
     });
     var discount = 0, paid = 80, remaining = Math.max(0, subtotal - discount - paid);
     var html = '';
-    html += '<div class="r-logo" style="text-align:center;font-size:26px">🧁</div>';
-    html += '<h2 class="rf-name" style="text-align:center;margin:2px 0">حلويات العلامة الزرقاء</h2>';
-    html += '<div class="rf-estab r-sub" style="text-align:center">أطيب الحلويات الطازجة</div>';
-    html += '<div class="rf-estab r-sub" style="text-align:center">الرياض – حي النخيل · هاتف: 0501234567</div>';
+    if(cfg.logoSide){
+      html += '<div data-drag="logo" style="display:flex;align-items:center;gap:8px;margin-bottom:4px;cursor:grab;user-select:none">' +
+        '<div class="r-logo" style="flex:0 0 auto;width:46px;height:46px;border-radius:50%;background:#eef2ff;display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid #1e3a8a">🧁</div>' +
+        '<div style="flex:1;text-align:right">' +
+          '<h2 class="rf-name" style="margin:0;font-size:16px;color:#1e3a8a">حلويات العلامة الزرقاء</h2>' +
+          '<div class="rf-estab r-sub" style="color:#1e40af">أطيب الحلويات الطازجة</div>' +
+          '<div class="rf-estab r-sub" style="color:#1e40af">الرياض – حي النخيل · هاتف: 0501234567</div>' +
+        '</div>' +
+      '</div>';
+    } else {
+      html += '<div class="r-logo" data-drag="logo" style="text-align:center;font-size:26px;cursor:grab;user-select:none">🧁</div>';
+      html += '<h2 class="rf-name" style="text-align:center;margin:2px 0">حلويات العلامة الزرقاء</h2>';
+      html += '<div class="rf-estab r-sub" style="text-align:center">أطيب الحلويات الطازجة</div>';
+      html += '<div class="rf-estab r-sub" style="text-align:center">الرياض – حي النخيل · هاتف: 0501234567</div>';
+    }
     html += '<div class="r-line" style="border-top:1px dashed #000;margin:4px 0"></div>';
     html += '<div class="rf-invno r-meta">رقم الطلب: #1024</div>';
     html += '<div class="rf-date r-meta">التاريخ: 2026/10/17 · 11:05 م</div>';
@@ -216,8 +229,24 @@
     html += '<div class="rf-paid r-meta" style="display:flex;justify-content:space-between"><span>المدفوع</span><span>'+paid.toFixed(2)+'</span></div>';
     html += '<div class="rf-remaining r-meta" style="display:flex;justify-content:space-between"><span>المتبقي</span><span>'+remaining.toFixed(2)+'</span></div>';
     html += '<div class="r-line" style="border-top:1px dashed #000;margin:4px 0"></div>';
-    if(cfg.show && cfg.show.thankYou!==false){
-      html += '<div class="rf-thanks r-foot" style="text-align:center;margin-top:4px">'+e(cfg.thankYouText||defaults.thankYouText)+'</div>';
+    var _sampleCaption = '';
+    try{
+      var _parts = [];
+      if(typeof RESTAURANT !== 'undefined' && RESTAURANT){
+        if(RESTAURANT.footer) _parts.push(RESTAURANT.footer);
+        if(RESTAURANT.devName) _parts.push('برمجة: ' + RESTAURANT.devName);
+      }
+      _sampleCaption = _parts.join(' · ');
+    }catch(e){ _sampleCaption = ''; }
+    var qrPlaceholder = '<div style="width:70px;height:70px;background:#eef2ff;border:1px solid #1e3a8a;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#1e3a8a">QR</div>';
+    if(cfg.qrSide){
+      html += '<div data-drag="qr" style="display:flex;align-items:center;gap:8px;margin-top:6px;border-top:1px dashed #000;padding-top:6px;cursor:grab;user-select:none">' +
+        '<div style="flex:1;text-align:right;font-size:11px;color:#444">' + (esc ? esc(_sampleCaption) : _sampleCaption) + '</div>' +
+        qrPlaceholder +
+      '</div>';
+    } else {
+      html += '<div class="r-qr" data-drag="qr" style="text-align:center;margin-top:6px;padding-top:6px;border-top:1px dashed #000;cursor:grab;user-select:none">' + qrPlaceholder +
+        '<div class="r-qr-cap" style="font-size:11px;color:#444;margin-top:2px">' + (esc ? esc(_sampleCaption) : _sampleCaption) + '</div></div>';
     }
     if(cfg.show && cfg.show.signature===true){
       html += '<div class="rf-signature r-user" style="text-align:center;margin-top:10px">'+e(cfg.signatureText||defaults.signatureText)+'</div>';
@@ -238,8 +267,90 @@
     container.innerHTML = '<div class="bmsprev" style="width:'+w+'mm;max-width:100%;box-sizing:border-box;'+
       'padding:4mm '+ms+'mm;margin:0 auto;background:#fff;color:#000;direction:rtl;'+
       'font-family:'+ff+';font-size:'+fs+'px;text-align:'+align+';'+
-      'box-shadow:0 2px 12px rgba(0,0,0,.18);border-radius:4px;">'+ sampleReceiptHtml(cfg) +'</div>';
+      'box-shadow:0 2px 12px rgba(0,0,0,.18);border-radius:4px;position:relative;">'+ sampleReceiptHtml(cfg) +'</div>';
     applyPrintCss(cfg); // حتى ينعكس إخفاء الحقول على المعاينة أيضاً
+    _attachDrag(container);
+    _attachSelect(container);
+  }
+
+  // ===== سحب بالماوس داخل المعاينة الحية =====
+  var _dragState = null;
+  var _selectedEl = null;
+  function _clearSel(){ if(_selectedEl){ _selectedEl.style.outline=''; _selectedEl.style.outlineOffset=''; _selectedEl=null; } }
+  function _typeOf(el){
+    if(!el || !el.className) return null;
+    var c = ' ' + el.className + ' ';
+    if(c.indexOf(' r-logo ')>=0) return 'logo';
+    if(c.indexOf(' rf-name ')>=0) return 'name';
+    if(c.indexOf(' rf-estab ')>=0) return 'estab';
+    if(c.indexOf(' rf-invno ')>=0 || c.indexOf(' rf-date ')>=0 || c.indexOf(' rf-customer ')>=0 || c.indexOf(' rf-phone ')>=0 || c.indexOf(' r-meta ')>=0) return 'meta';
+    if(c.indexOf(' rf-items ')>=0 || c.indexOf(' rf-qty ')>=0 || c.indexOf(' rf-price ')>=0) return 'items';
+    if(c.indexOf(' r-tot ')>=0 || c.indexOf(' rf-total ')>=0 || c.indexOf(' rf-paid ')>=0 || c.indexOf(' rf-remaining ')>=0 || c.indexOf(' rf-discount ')>=0) return 'totals';
+    if(c.indexOf(' r-qr ')>=0 || c.indexOf(' r-qr-cap ')>=0) return 'qr';
+    if(c.indexOf(' r-foot ')>=0 || c.indexOf(' rf-thanks ')>=0 || c.indexOf(' r-dev ')>=0 || c.indexOf(' rf-signature ')>=0) return 'footer';
+    if(c.indexOf(' r-line ')>=0) return 'line';
+    return null;
+  }
+  function _attachSelect(container){
+    var prev = container.querySelector('.bmsprev');
+    if(!prev) return;
+    prev.addEventListener('click', function(e){
+      _clearSel();
+      var cur = e.target;
+      var type = null;
+      while(cur && cur !== prev){
+        type = _typeOf(cur);
+        if(type){ break; }
+        cur = cur.parentElement;
+      }
+      if(!type){ if(typeof window.bmsOnPreviewDeselect==='function') window.bmsOnPreviewDeselect(); return; }
+      _selectedEl = cur;
+      cur.style.outline = '2px dashed #2563eb';
+      cur.style.outlineOffset = '2px';
+      if(typeof window.bmsOnPreviewSelect === 'function') window.bmsOnPreviewSelect(type);
+    });
+  }
+  // معالجات عامة (تُسجَّل مرة واحدة)
+  if(!window.__bmsDragBound){
+    window.__bmsDragBound = true;
+    document.addEventListener('mousemove', function(e){
+      if(!_dragState) return;
+      _dragState.moved = true;
+      var dx = e.clientX - _dragState.startX;
+      _dragState.el.style.transform = 'translateX(' + dx + 'px)';
+    });
+    document.addEventListener('mouseup', function(e){
+      if(!_dragState) return;
+      var st = _dragState;
+      _dragState = null;
+      st.el.style.opacity = '';
+      st.el.style.transform = '';
+      if(!st.moved) return;
+      var prev = st.el.closest('.bmsprev');
+      if(!prev) return;
+      var prevRect = prev.getBoundingClientRect();
+      var elRect = st.el.getBoundingClientRect();
+      var center = (elRect.left + elRect.width/2) - prevRect.left;
+      var third = prevRect.width / 3;
+      var newAlign = (center < third) ? 'right' : (center > 2*third) ? 'left' : 'center';
+      var alignSel = document.getElementById('pAlign');
+      if(alignSel && alignSel.value !== newAlign){
+        alignSel.value = newAlign;
+        alignSel.dispatchEvent(new Event('change', {bubbles:true}));
+      }
+    });
+  }
+  function _attachDrag(container){
+    var prev = container.querySelector('.bmsprev');
+    if(!prev) return;
+    var items = prev.querySelectorAll('[data-drag]');
+    items.forEach(function(el){
+      el.addEventListener('mousedown', function(e){
+        _dragState = { el: el, startX: e.clientX, moved: false };
+        el.style.opacity = '0.6';
+        e.preventDefault();
+      });
+    });
   }
 
   window.BMSPrinter = {

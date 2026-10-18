@@ -1,0 +1,178 @@
+/* ============================================================
+   شكل النظام "الجديد" — قوي وجذاب (Modern Glassmorphism)
+   يُفعَّل بإضافة class "ui-style-new" على <body>
+   (يتم تطبيقها عبر إعدادات النظام: uiStyle = 'new')
+   ============================================================ */
+body.ui-style-new{
+  --primary:#7c3aed;
+  --primary-dark:#6d28d9;
+  --primary-light:#f5f3ff;
+  --dark:#0f172a;
+  --muted:#64748b;
+  --line:rgba(124,58,237,.18);
+  --bg:linear-gradient(135deg,#0f172a 0%,#1e1b4b 40%,#312e81 100%);
+  --card:rgba(255,255,255,.85);
+  --ok:#10b981;
+  --danger:#f43f5e;
+  --shadow:0 12px 40px rgba(124,58,237,.25);
+  background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#312e81 100%) fixed;
+  background-size:200% 200%;
+  animation:uiNewBg 18s ease infinite;
+  color:#0f172a;
+}
+@keyframes uiNewBg{
+  0%{background-position:0% 50%}
+  50%{background-position:100% 50%}
+  100%{background-position:0% 50%}
+}
+body.ui-style-new .card,
+body.ui-style-new .settings-card,
+body.ui-style-new .modal-box,
+body.ui-style-new .exm-box{
+  background:rgba(255,255,255,.78);
+  backdrop-filter:blur(14px) saturate(160%);
+  -webkit-backdrop-filter:blur(14px) saturate(160%);
+  border:1px solid rgba(124,58,237,.18);
+  border-radius:20px;
+  box-shadow:0 12px 40px rgba(124,58,237,.18), inset 0 1px 0 rgba(255,255,255,.6);
+}
+body.ui-style-new .brand,
+body.ui-style-new .pos-header,
+body.ui-style-new .topbar{
+  background:linear-gradient(120deg,#7c3aed,#a855f7 60%,#ec4899);
+  color:#fff;
+  box-shadow:0 8px 24px rgba(124,58,237,.35);
+}
+body.ui-style-new .btn,
+body.ui-style-new button.primary,
+body.ui-style-new .btn.primary{
+  background:linear-gradient(135deg,#7c3aed,#a855f7);
+  border:none;
+  color:#fff;
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(124,58,237,.35);
+  transition:transform .15s, box-shadow .15s, filter .15s;
+  font-weight:800;
+}
+body.ui-style-new .btn:hover,
+body.ui-style-new button.primary:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 24px rgba(124,58,237,.45);
+  filter:brightness(1.08);
+}
+body.ui-style-new .btn:active{ transform:translateY(0) scale(.98); }
+body.ui-style-new .pos-btn,
+body.ui-style-new .pay-btn{
+  background:linear-gradient(135deg,#7c3aed,#a855f7);
+  border:none;
+  color:#fff;
+  border-radius:16px;
+  box-shadow:0 8px 22px rgba(124,58,237,.3);
+  transition:transform .15s, box-shadow .15s;
+}
+body.ui-style-new .pos-btn:hover,
+body.ui-style-new .pay-btn:hover{
+  transform:translateY(-3px);
+  box-shadow:0 12px 28px rgba(124,58,237,.4);
+}
+body.ui-style-new .modal{ background:rgba(15,23,42,.6); backdrop-filter:blur(6px); }
+body.ui-style-new .modal-box{ border-radius:24px; }
+body.ui-style-new .modal-head{
+  background:linear-gradient(120deg,#7c3aed,#a855f7);
+  color:#fff;
+  border-radius:24px 24px 0 0;
+}
+body.ui-style-new .modal-head h3{ color:#fff; }
+body.ui-style-new .close-btn{ background:rgba(255,255,255,.2); color:#fff; }
+body.ui-style-new .close-btn:hover{ background:rgba(255,255,255,.35); }
+body.ui-style-new input,
+body.ui-style-new select,
+body.ui-style-new textarea{
+  border:2px solid rgba(124,58,237,.2);
+  border-radius:12px;
+  background:rgba(255,255,255,.9);
+  transition:border-color .15s, box-shadow .15s;
+}
+body.ui-style-new input:focus,
+body.ui-style-new select:focus,
+body.ui-style-new textarea:focus{
+  border-color:#7c3aed;
+  box-shadow:0 0 0 4px rgba(124,58,237,.15);
+  background:#fff;
+}
+body.ui-style-new .ticket,
+body.ui-style-new .order-card{
+  border-radius:18px;
+  box-shadow:0 8px 24px rgba(124,58,237,.12);
+  border:1px solid rgba(124,58,237,.12);
+}
+body.ui-style-new .menu-item,
+body.ui-style-new .cust-item{
+  border-radius:16px;
+  transition:transform .15s, box-shadow .15s;
+}
+body.ui-style-new .menu-item:hover,
+body.ui-style-new .cust-item:hover{
+  transform:translateY(-2px);
+  box-shadow:0 8px 20px rgba(124,58,237,.15);
+}
+body.ui-style-new .tab,
+body.ui-style-new .side-link{
+  border-radius:12px;
+  transition:background .15s, transform .1s;
+}
+body.ui-style-new .side-link.active{
+  background:linear-gradient(120deg,#7c3aed,#a855f7);
+  color:#fff;
+  box-shadow:0 4px 14px rgba(124,58,237,.3);
+}
+body.ui-style-new .badge,
+body.ui-style-new .ex-badge{
+  border-radius:99px;
+  font-weight:800;
+}
+body.ui-style-new .toast{
+  background:linear-gradient(120deg,#7c3aed,#a855f7);
+  color:#fff;
+  border-radius:30px;
+  box-shadow:0 12px 30px rgba(124,58,237,.4);
+}
+body.ui-style-new ::-webkit-scrollbar{ width:8px; height:8px; }
+body.ui-style-new ::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#7c3aed,#a855f7);
+  border-radius:8px;
+}
+body.ui-style-new ::-webkit-scrollbar-track{ background:rgba(124,58,237,.08); border-radius:8px; }
+body.ui-style-new h1, body.ui-style-new h2, body.ui-style-new h3{ letter-spacing:-.3px; }
+body.ui-style-new .exm-box, body.ui-style-new .exm-modal.show .exm-box{
+  border-radius:24px;
+  box-shadow:0 30px 80px rgba(124,58,237,.35);
+}
+body.ui-style-new .exm-head{
+  background:linear-gradient(120deg,#7c3aed,#a855f7 60%,#ec4899);
+  border-radius:24px 24px 0 0;
+}
+body.ui-style-new .ex-send,
+body.ui-style-new .ex-confirm,
+body.ui-style-new .ex-newbtn{
+  background:linear-gradient(135deg,#7c3aed,#a855f7);
+  box-shadow:0 10px 22px rgba(124,58,237,.4);
+  border-radius:14px;
+}
+body.ui-style-new .ex-confirm{ background:linear-gradient(135deg,#10b981,#34d399); }
+body.ui-style-new .ex-confirm:active{ transform:scale(.98); }
+body.ui-style-new .exp-btn.appr{ background:linear-gradient(135deg,#10b981,#34d399); }
+body.ui-style-new .exp-btn.rej{ background:linear-gradient(135deg,#f43f5e,#fb7185); }
+body.ui-style-new .exp-btn.ret{ background:linear-gradient(135deg,#8b5cf6,#a78bfa); }
+body.ui-style-new .exp-btn.det{ background:linear-gradient(135deg,#475569,#94a3b8); }
+body.ui-style-new .exp-pdf-btn{ background:linear-gradient(135deg,#f43f5e,#fb7185); }
+body.ui-style-new .exp-range-box{ background:linear-gradient(120deg,#7c3aed,#a855f7); }
+body.ui-style-new .exp-sum-head{ background:linear-gradient(120deg,#7c3aed,#a855f7); }
+body.ui-style-new .exp-sum-head.yer{ background:linear-gradient(120deg,#a855f7,#ec4899); }
+/* live preview (printer) */
+body.ui-style-new .bmsprev{ border-radius:12px; box-shadow:0 8px 24px rgba(124,58,237,.25); }
+/* receipt (printed) stays neutral — print should be black/white */
+@media print{
+  body.ui-style-new{ background:#fff !important; animation:none !important; }
+  body.ui-style-new .receipt{ background:#fff !important; }
+}

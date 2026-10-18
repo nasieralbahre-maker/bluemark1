@@ -17,6 +17,7 @@
 <link rel="stylesheet" href="styles.css" />
 <link rel="stylesheet" href="dashboard.css" />
 <link rel="stylesheet" href="brand.css" />
+<link rel="stylesheet" href="theme-new.css" />
 <style id="bmSplashStyle">
   .bm-splash{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;
     background:linear-gradient(180deg,rgba(10,20,55,.62) 0%,rgba(9,16,45,.74) 45%,rgba(7,12,38,.88) 100%),url('splash-bg.jpg') center/cover no-repeat;
@@ -402,6 +403,7 @@
     <div class="pos-user" id="posUserBox" style="display:none">
       <span class="pos-user-name" id="posUserName"></span>
       <button class="report-link" id="posSwitchBtn">🔄 تبديل</button>
+      <button class="report-link" id="myExpensesBtn">💰 مصاريفي</button>
       <button class="report-link pos-update-link" id="posUpdateBtn">🔄 تحديث</button>
       <button class="report-link" id="extFormBtn">➕ استمارة <span class="acctreq-badge" id="extSubBadge" style="display:none">0</span></button>
       <button class="bio-enroll-btn hidden" id="bioEnrollBtn">👆 بصمة</button>
@@ -1218,6 +1220,8 @@
 <script src="dashboard.js"></script>
 <script src="mobile.js"></script>
 <script src="tasks.js"></script>
+<script src="expenses.js?v=1"></script>
+<script src="expenses-admin.js?v=1"></script>
 <script src="updater.js?v=3"></script>
 <script>
 /* شاشة الترحيب: تظهر عند كل فتح للنظام ثم تختفي تلقائياً، أو عند لمس الشاشة */

@@ -8,8 +8,10 @@ let RESTAURANT = {
   currency: 'YER',           // العملة الافتراضية: الريال اليمني
   footer: 'شكراً لزيارتكم ❤️',
   exchanges: [ { name: 'شركة المشقاص للصرافة', color: '#16a34a' } ],
-  print: { align:'center', marginTop:0, marginSide:4, paddingV:6, fontSize:12 },
+  print: { align:'center', logoSide:false, marginTop:0, marginSide:4, paddingV:6, fontSize:12,
+    margins: { right:{top:0,side:4,padV:6}, center:{top:0,side:4,padV:6}, left:{top:0,side:4,padV:6} } },
   fonts: { base:100, heading:100, table:100, button:100, input:100 },
+  uiStyle: 'old', // 'old' | 'new' (شكل النظام)
   invoice: { fontHeading:18, fontBody:12, fontTable:12, fontTotal:14, fontFooter:11,
     showLogo:true, showTagline:true, showAddress:true, showPhone:true, showPickup:true,
     showTheme:true, showCashier:true, showFooter:true,
@@ -51,9 +53,11 @@ function applyPrintStyle(){
   const r = document.getElementById('receipt');
   if(!r) return;
   const p = RESTAURANT.print || {};
-  const side = (Number(p.marginSide) || 0) + 'mm';
-  const top  = (Number(p.marginTop) || 0) + 'mm';
-  const padV = (Number(p.paddingV) || 0) + 'mm';
+  // هوامش حسب موضع الفاتورة (يمين/وسط/يسار) — مع fallback للقيم القديمة
+  const _m = (p.margins && p.margins[p.align]) || {};
+  const side = (Number(_m.side != null ? _m.side : p.marginSide) || 0) + 'mm';
+  const top  = (Number(_m.top != null ? _m.top : p.marginTop) || 0) + 'mm';
+  const padV = (Number(_m.padV != null ? _m.padV : p.paddingV) || 0) + 'mm';
   // موقع الفاتورة على الورقة
   if(p.align === 'right'){ r.style.left = 'auto'; r.style.right = '0'; r.style.margin = top + ' 0 0 0'; }
   else if(p.align === 'left'){ r.style.right = 'auto'; r.style.left = '0'; r.style.margin = top + ' 0 0 0'; }
@@ -810,16 +814,35 @@ function printReceipt(order){
 
   // ===== كتل الفاتورة (قابلة لإعادة الترتيب والإخفاء من لوحة التحكم) =====
   const blocks = {};
-  blocks.header =
-    '<div class="r-center">' +
-      ((inv.showLogo !== false) && RESTAURANT.logo ? '<img class="r-logo" src="' + esc(RESTAURANT.logo) + '" alt="" />' : '') +
-      '<h2 class="rf-name">' + esc(RESTAURANT.headerBrand || RESTAURANT.name) + '</h2>' +
-      ((inv.showTagline !== false) && RESTAURANT.headerTagline ? '<div class="r-tagline rf-estab">' + esc(RESTAURANT.headerTagline) + '</div>' : '') +
-      ((inv.showAddress !== false) ? '<div class="r-sub rf-estab">' + esc(RESTAURANT.address) + '</div>' : '') +
-      ((inv.showPhone !== false) ? '<div class="r-sub rf-estab">هاتف: ' + esc(RESTAURANT.phone) + '</div>' : '') +
-      (showVat && RESTAURANT.vatNo ? '<div class="r-sub rf-estab">الرقم الضريبي: ' + esc(RESTAURANT.vatNo) + '</div>' : '') +
-    '</div>' +
-    '<div class="r-line"></div>';
+  const _logoSideLocal = (pcfg && pcfg.logoSide === true);
+  const _logoSideShared = (RESTAURANT.print && RESTAURANT.print.logoSide === true);
+  const _logoSide = (_logoSideLocal || _logoSideShared) && (inv.showLogo !== false) && RESTAURANT.logo;
+  const _qrSide = (pcfg && pcfg.qrSide === true);
+  if(_logoSide){
+    blocks.header =
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+        '<img class="r-logo" src="' + esc(RESTAURANT.logo) + '" alt="" style="width:60px;height:60px;margin:0;flex:0 0 auto;border-radius:50%;object-fit:cover;border:2px solid #1e3a8a" />' +
+        '<div style="flex:1;text-align:right">' +
+          '<h2 class="rf-name" style="margin:0">' + esc(RESTAURANT.headerBrand || RESTAURANT.name) + '</h2>' +
+          ((inv.showTagline !== false) && RESTAURANT.headerTagline ? '<div class="r-tagline rf-estab">' + esc(RESTAURANT.headerTagline) + '</div>' : '') +
+          ((inv.showAddress !== false) ? '<div class="r-sub rf-estab">' + esc(RESTAURANT.address) + '</div>' : '') +
+          ((inv.showPhone !== false) ? '<div class="r-sub rf-estab">هاتف: ' + esc(RESTAURANT.phone) + '</div>' : '') +
+          (showVat && RESTAURANT.vatNo ? '<div class="r-sub rf-estab">الرقم الضريبي: ' + esc(RESTAURANT.vatNo) + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div class="r-line"></div>';
+  } else {
+    blocks.header =
+      '<div class="r-center">' +
+        ((inv.showLogo !== false) && RESTAURANT.logo ? '<img class="r-logo" src="' + esc(RESTAURANT.logo) + '" alt="" />' : '') +
+        '<h2 class="rf-name">' + esc(RESTAURANT.headerBrand || RESTAURANT.name) + '</h2>' +
+        ((inv.showTagline !== false) && RESTAURANT.headerTagline ? '<div class="r-tagline rf-estab">' + esc(RESTAURANT.headerTagline) + '</div>' : '') +
+        ((inv.showAddress !== false) ? '<div class="r-sub rf-estab">' + esc(RESTAURANT.address) + '</div>' : '') +
+        ((inv.showPhone !== false) ? '<div class="r-sub rf-estab">هاتف: ' + esc(RESTAURANT.phone) + '</div>' : '') +
+        (showVat && RESTAURANT.vatNo ? '<div class="r-sub rf-estab">الرقم الضريبي: ' + esc(RESTAURANT.vatNo) + '</div>' : '') +
+      '</div>' +
+      '<div class="r-line"></div>';
+  }
   blocks.meta =
     '<div class="r-meta">' +
       '<div>' + (showVat ? 'فاتورة ضريبية مبسطة' : 'فاتورة') + '</div>' +
@@ -858,19 +881,27 @@ function printReceipt(order){
       : '');
   blocks.footer =
     ((inv.showFooter !== false) ? '<div class="r-foot">' + esc(RESTAURANT.footer || '') + '<br/>' + (hasRemain ? 'يرجى الاحتفاظ بالفاتورة لسداد المتبقي' : 'نتمنى لكم وجبة شهية') + '</div>' : '') +
-    ((inv.showCashier !== false) && order.cashier ? '<div class="r-user">المستخدم: ' + esc(order.cashier) + '</div>' : '') +
-    ((pcfg && pcfg.show && pcfg.show.thankYou!==false && pcfg.thankYouText) ? '<div class="r-foot rf-thanks">' + esc(pcfg.thankYouText) + '</div>' : '') +
-    ((pcfg && pcfg.show && pcfg.show.signature===true && pcfg.signatureText) ? '<div class="r-user rf-signature">' + esc(pcfg.signatureText) + '</div>' : '') +
-    (RESTAURANT.devName ? '<div class="r-dev">برمجة: ' + esc(RESTAURANT.devName) + '</div>' : '');
+    ((pcfg && pcfg.show && pcfg.show.signature===true && pcfg.signatureText) ? '<div class="r-user rf-signature">' + esc(pcfg.signatureText) + '</div>' : '');
+  // نصوص تُعرض بجوار رمز QR (المستخدم / لزيارتكم / شكراً / برمجة) — بدل أن تأخذ أسطراً منفصلة
+  const _qrCaptionParts = [];
+  if((inv.showCashier !== false) && order.cashier) _qrCaptionParts.push('المستخدم: ' + esc(order.cashier));
+  if(pcfg && pcfg.show && pcfg.show.thankYou !== false && pcfg.thankYouText) _qrCaptionParts.push(esc(pcfg.thankYouText));
+  else if(RESTAURANT.footer) _qrCaptionParts.push(esc(RESTAURANT.footer));
+  if(RESTAURANT.devName) _qrCaptionParts.push('برمجة: ' + esc(RESTAURANT.devName));
+  const _qrCaption = _qrCaptionParts.join(' · ');
   blocks.qr =
     ((RESTAURANT.qrEnabled !== false) ? (function(){
       const u = makeOrderQR(order);
       return u
-        ? '<div class="r-qr" style="text-align:center;margin:0;padding:0;">' +
+        ? (_qrSide ? '<div style="display:flex;align-items:center;gap:8px;margin:0;padding:0;justify-content:flex-end;">' +
+               '<div style="flex:1;text-align:right;font-size:11px;color:#444;">امسح الكود لاستدعاء الطلب (' + _qrCaption + '</div>' +
+               '<img src="' + u + '" alt="QR" style="width:90px;height:90px;image-rendering:pixelated;flex:0 0 auto;" />' +
+             '</div>' :
+             '<div class="r-qr" style="text-align:center;margin:0;padding:0;">' +
             '<img src="' + u + '" alt="QR" style="width:120px;height:120px;image-rendering:pixelated;" />' +
-            '<div class="r-qr-cap" style="font-size:11px;color:#444;margin-top:2px;">امسح الكود لاستدعاء الطلب (' + esc(orderNoLabel(order)) + ')</div>' +
+             '<div class="r-qr-cap" style="font-size:11px;color:#444;margin-top:2px;">' + _qrCaption + '</div>' +
           '</div>'
-        : '';
+        ) : '';
     })() : '');
 
   const defOrder = ['header','meta','items','totals','payment','footer','qr'];
@@ -2943,6 +2974,8 @@ function applySettings(cfg){
   RESTAURANT.orderTypes = Object.assign({}, RESTAURANT.orderTypes, cfg.orderTypes || {});
   // تطبيق الخطوط العامة
   applyGlobalFonts(RESTAURANT.fonts);
+  // تطبيق شكل النظام (قديم/جديد)
+  try{ document.body.classList.toggle('ui-style-new', RESTAURANT.uiStyle === 'new'); }catch(e){}
   // تحديث عنوان الشاشة ونسبة الضريبة الظاهرة
   const vatLabel = document.getElementById('vatLabel');
   if(vatLabel) vatLabel.textContent = 'ضريبة القيمة المضافة (' + Math.round((RESTAURANT.vatRate||0)*100) + '%)';
