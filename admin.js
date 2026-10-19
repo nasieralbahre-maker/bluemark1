@@ -1860,7 +1860,8 @@ window.AdminUI = (function(){
     thankYouText:'pThankText', signatureText:'pSignText',
     defaultPrinter:'pDefaultPrinter', copies:'pCopies', feedLines:'pFeedLines',
     qrSize:'pQrSize', qrGap:'pQrGap', lineGap:'pLineGap',
-    colName:'pColName', colQty:'pColQty', colPrice:'pColPrice', colClear:'pColClear'
+    colName:'pColName', colQty:'pColQty', colPrice:'pColPrice', colClear:'pColClear',
+    a4Mode:'pA4Mode'
   };
   var boolIds = { silent:'pSilent', autoCut:'pAutoCut', cashDrawer:'pCashDrawer', logoSide:'pLogoSide', qrSide:'pQrSide' };
   var showIds = {
@@ -1877,7 +1878,9 @@ window.AdminUI = (function(){
     if(wrap) wrap.style.display = (sel && sel.value==='custom') ? 'flex' : 'none';
   }
   function fillForm(cfg){
-    Object.keys(ids).forEach(function(k){ var el=$(ids[k]); if(el) el.value = (cfg[k]!=null?cfg[k]:''); });
+    Object.keys(ids).forEach(function(k){ var el=$(ids[k]); if(!el) return;
+      if(k==='a4Mode'){ el.value = (cfg.a4Mode==null||cfg.a4Mode==='')?'auto':String(cfg.a4Mode); return; }
+      el.value = (cfg[k]!=null?cfg[k]:''); });
     Object.keys(boolIds).forEach(function(k){ var el=$(boolIds[k]); if(el) el.checked = cfg[k]===true; });
     cfg.show = cfg.show || {};
     Object.keys(showIds).forEach(function(k){ var el=$(showIds[k]); if(el) el.checked = cfg.show[k]!==false; });
@@ -1914,7 +1917,6 @@ window.AdminUI = (function(){
     Object.keys(showIds).forEach(function(k){ var el=$(showIds[k]); if(el) cfg.show[k]=el.checked; });
     return cfg;
   }
-  function preview(){ try{ BMSPrinter.renderPreview('#pPreview', readForm()); }catch(e){} }
 
   // ⚙️ ضبط تلقائي ذكي: يضبط كل ما يتحكم فيه التطبيق بضغطة واحدة
   function detectWidthFromName(name){
@@ -1945,7 +1947,7 @@ window.AdminUI = (function(){
     BMSPrinter.save(cfg);
     BMSPrinter.applyPrintCss(cfg);
     fillForm(cfg);
-    preview();
+    /* لا معاينة */;
     var msg = detected
       ? ('✔️ تم الضبط تلقائياً حسب الطابعة (عرض ' + detected + 'مم).')
       : '✔️ تم ضبط الإعدادات المثالية (هوامش 0، ارتفاع تلقائي).';
@@ -2006,10 +2008,8 @@ window.AdminUI = (function(){
 
   function bind(){
     var wrap = $('tab-printer'); if(!wrap) return;
-    wrap.addEventListener('input', preview);
-    wrap.addEventListener('change', preview);
     var selPaper=$('pPaper');
-    if(selPaper) selPaper.addEventListener('change', function(){ syncCustom(); preview(); });
+    if(selPaper) selPaper.addEventListener('change', function(){ syncCustom(); });
     var sv=$('pSaveBtn');
     if(sv) sv.onclick=function(){
       var c=readForm(); BMSPrinter.save(c); BMSPrinter.applyPrintCss(c);
@@ -2031,68 +2031,13 @@ window.AdminUI = (function(){
     var rb=$('pRestoreBtn');
     if(rb) rb.onclick=function(){
       var d=JSON.parse(JSON.stringify(BMSPrinter.defaults));
-      BMSPrinter.save(d); fillForm(d); preview();
+      BMSPrinter.save(d); fillForm(d); /* لا معاينة */;
       if(typeof showToast==='function') showToast('تمت استعادة الإعدادات الافتراضية');
     };
     // ===== صندوق إعدادات العنصر المحدد في المعاينة =====
-    var _selTypeLabels = { logo:'الشعار', name:'اسم المنشأة', estab:'بيانات المنشأة', meta:'بيانات الطلب', items:'جدول الأصناف', totals:'الإجماليات', qr:'رمز QR', footer:'التذييل', line:'خط فاصل' };
-    var _selFieldsMap = {
-      logo:   [['logoSide','شعار على يسار (تفعيل/إلغاء)',null],['marginSide','الهامش الجانبي (مم)',0,40,1],['marginTop','الهامش العلوي (مم)',0,60,1],['lineGap','المسافة بين الكتل (px)',0,30,1]],
-      name:   [['fontSize','حجم الخط (px)',8,22,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]],
-      estab:  [['fontSize','حجم الخط (px)',8,22,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]],
-      meta:   [['fontSize','حجم الخط (px)',8,22,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]],
-      items:  [['colName','عرض عمود الصنف (px)',0,200,1],['colQty','عرض عمود الكمية (px)',6,80,1],['colPrice','عرض عمود المبلغ (px)',20,160,1],['colClear','تفراغ يسار (px)',0,60,1],['lineGap','المسافة بين الكتل (px)',0,30,1]],
-      totals: [['fontSize','حجم الخط (px)',8,22,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]],
-      qr:     [['qrSize','حجم رمز QR (px)',40,200,2],['qrGap','المسافة أعلى QR (px)',0,40,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['qrSide','QR على يمين (تفعيل/إلغاء)',null]],
-      footer: [['fontSize','حجم الخط (px)',8,22,1],['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]],
-      line:   [['lineGap','المسافة بين الكتل (px)',0,30,1],['marginSide','الهامش الجانبي (مم)',0,40,1]]
-    };
-    var _keyToId = {
-      marginSide:'pMarginSide', marginTop:'pMarginTop', marginBottom:'pMarginBottom',
-      fontSize:'pFontSize', lineGap:'pLineGap', qrSize:'pQrSize', qrGap:'pQrGap',
-      colName:'pColName', colQty:'pColQty', colPrice:'pColPrice', colClear:'pColClear',
-      logoSide:'pLogoSide', qrSide:'pQrSide'
-    };
-    function _addField(key, label, min, max, step){
-      var srcId = _keyToId[key] || key;
-      var src = $(srcId); if(!src) return;
-      var fields = $('pSelFields'); if(!fields) return;
-      var wrap = document.createElement('label');
-      wrap.style.cssText = 'display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#334155;min-width:100px';
-      var span = document.createElement('span'); span.textContent = label;
-      var inp;
-      if(src.type === 'checkbox'){
-        inp = document.createElement('input'); inp.type='checkbox';
-        inp.checked = src.checked;
-        inp.style.cssText = 'width:18px;height:18px;accent-color:#2563eb';
-        inp.addEventListener('change', function(){ src.checked = inp.checked; src.dispatchEvent(new Event('change',{bubbles:true})); preview(); });
-      } else {
-        inp = document.createElement('input'); inp.type='number';
-        if(min!=null) inp.min=min; if(max!=null) inp.max=max; if(step!=null) inp.step=step;
-        inp.value = src.value;
-        inp.style.cssText = 'border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 8px;font-family:inherit;font-size:13px;background:#f8fafc;width:100%';
-        inp.addEventListener('input', function(){ src.value = inp.value; src.dispatchEvent(new Event('input',{bubbles:true})); preview(); });
-      }
-      src.addEventListener('input', function(){ if(inp.type!=='checkbox') inp.value = src.value; });
-      src.addEventListener('change', function(){ if(inp.type==='checkbox') inp.checked = src.checked; else inp.value = src.value; });
-      wrap.appendChild(span); wrap.appendChild(inp);
-      fields.appendChild(wrap);
-    }
-    window.bmsOnPreviewSelect = function(type){
-      var panel = $('pSelPanel'); if(!panel) return;
-      var title = $('pSelTitle'); if(title) title.textContent = 'إعدادات: ' + (_selTypeLabels[type] || type);
-      var fields = $('pSelFields'); if(fields) fields.innerHTML = '';
-      var list = _selFieldsMap[type] || [];
-      list.forEach(function(f){ _addField(f[0], f[1], f[2], f[3], f[4]); });
-      panel.style.display = '';
-    };
-    window.bmsOnPreviewDeselect = function(){
-      var panel = $('pSelPanel'); if(panel) panel.style.display = 'none';
-    };
-
     // تحديث المعاينة والطابعات عند فتح تبويب الطابعة
     var link = document.querySelector('.side-link[data-tab="printer"]');
-    if(link) link.addEventListener('click', function(){ setTimeout(function(){ preview(); refreshPrinters(); }, 30); });
+    if(link) link.addEventListener('click', function(){ setTimeout(function(){ /* لا معاينة */; refreshPrinters(); }, 30); });
   }
   // محرّك طباعة موحّد يحترم الطباعة المباشرة/النسخ/القطع/درج النقود عبر الجسر الأصلي
   window.bmsDoPrint = function(cfg){
@@ -2113,5 +2058,6 @@ window.AdminUI = (function(){
       (function loop(i){ if(i<=0) return; window.print(); if(i>1) setTimeout(function(){ loop(i-1); }, 400); })(n);
     }catch(e){ try{ window.print(); }catch(_){} }
   };
-  try{ fillForm(BMSPrinter.load()); bind(); preview(); refreshPrinters(); }catch(e){}
+  try{ fillForm(BMSPrinter.load()); bind(); /* لا معاينة */; refreshPrinters(); }
+  catch(e){ console.error('[BMSPrinter] فشل تهيئة إعدادات الطابعة:', e); }
 })();

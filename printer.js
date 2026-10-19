@@ -13,6 +13,7 @@
     _v: VERSION,             // إصدار الإعدادات
     paperWidth: 80,          // عرض الورق (مم) — حرّ (مثال 58/60/72/80مم أو أي قيمة)
     paperHeight: 0,          // ارتفاع الورق (مم)؛ 0 = تلقائي (يقص بعد آخر سطر)
+    a4Mode: 'auto',           // 'auto' = ورقة A4 على الجوال تلقائياً · 'on' = دائماً A4 · 'off' = دائماً شريط POS
     marginTop: 0,            // مم
     marginBottom: 0,         // مم
     marginSide: 2,           // مم
@@ -89,22 +90,22 @@
   function fieldHideCss(cfg){
     var s = cfg.show || {}; var out = '';
     function hide(v, sel){ if(v===false){ out += sel+'{display:none!important;}'; } }
-    hide(s.logo,          '#receipt .r-logo, .bmsprev .r-logo');
-    hide(s.name,          '#receipt .rf-name, .bmsprev .rf-name');
-    hide(s.establishment, '#receipt .rf-estab, .bmsprev .rf-estab');
-    hide(s.invoiceNo,     '#receipt .rf-invno, .bmsprev .rf-invno');
-    hide(s.date,          '#receipt .rf-date, .bmsprev .rf-date');
-    hide(s.customer,      '#receipt .rf-customer, .bmsprev .rf-customer');
-    hide(s.phone,         '#receipt .rf-phone, .bmsprev .rf-phone');
-    hide(s.items,         '#receipt .rf-items, .bmsprev .rf-items');
-    hide(s.qty,           '#receipt .rf-qty, .bmsprev .rf-qty');
-    hide(s.prices,        '#receipt .rf-price, .bmsprev .rf-price');
-    hide(s.total,         '#receipt .rf-total, .bmsprev .rf-total');
-    hide(s.discount,      '#receipt .rf-discount, .bmsprev .rf-discount');
-    hide(s.paid,          '#receipt .rf-paid, .bmsprev .rf-paid');
-    hide(s.remaining,     '#receipt .rf-remaining, .bmsprev .rf-remaining');
-    hide(s.signature,     '#receipt .rf-signature, .bmsprev .rf-signature');
-    hide(s.thankYou,      '#receipt .rf-thanks, .bmsprev .rf-thanks');
+    hide(s.logo,          '#receipt .r-logo');
+    hide(s.name,          '#receipt .rf-name');
+    hide(s.establishment, '#receipt .rf-estab');
+    hide(s.invoiceNo,     '#receipt .rf-invno');
+    hide(s.date,          '#receipt .rf-date');
+    hide(s.customer,      '#receipt .rf-customer');
+    hide(s.phone,         '#receipt .rf-phone');
+    hide(s.items,         '#receipt .rf-items');
+    hide(s.qty,           '#receipt .rf-qty');
+    hide(s.prices,        '#receipt .rf-price');
+    hide(s.total,         '#receipt .rf-total');
+    hide(s.discount,      '#receipt .rf-discount');
+    hide(s.paid,          '#receipt .rf-paid');
+    hide(s.remaining,     '#receipt .rf-remaining');
+    hide(s.signature,     '#receipt .rf-signature');
+    hide(s.thankYou,      '#receipt .rf-thanks');
     return out;
   }
 
@@ -112,6 +113,23 @@
   // عرض الورق الحرّ (مم) مع حدود منطقية
   function paperW(cfg){ var w = num(cfg.paperWidth,80); if(w<30) w=30; if(w>200) w=200; return w; }
   function paperH(cfg){ var h = num(cfg.paperHeight,0); if(h<0) h=0; if(h>2000) h=2000; return h; }
+
+  // ---------- وضع A4: الفاتورة في وسط ورقة A4 (بين اليمين واليسار) ----------
+  // على الجوال تُطبع الفواتير عادةً على ورق A4 (طابعة ليزر/منزلية)،
+  // فالفاتورة الضيقة (80مم) تظهر ملتصقة بالحافة — لذلك نوسّطها أفقياً.
+  function isMobileDevice(){
+    var ua = navigator.userAgent || '';
+    if(/Android|iPhone|iPad|iPod|Mobile|Silk|IEMobile|Opera Mini/i.test(ua)) return true;
+    // iPadOS 13+
+    if(navigator.platform === 'MacIntel' && (navigator.maxTouchPoints || 0) > 1) return true;
+    return false;
+  }
+  function useA4(cfg){
+    var m = cfg ? cfg.a4Mode : 'auto';
+    if(m === true || m === 'on' || m === '1' || m === 1) return true;
+    if(m === false || m === 'off' || m === '0' || m === 0) return false;
+    return isMobileDevice();      // 'auto' → تلقائي حسب الجهاز
+  }
 
   function buildPrintCss(cfg){
     cfg = cfg || load();
@@ -121,17 +139,34 @@
     var fs = num(cfg.fontSize,12);
     var ff = fontStack(cfg.fontFamily);
     var align = (cfg.align==='right'||cfg.align==='left') ? cfg.align : 'center';
+    var clr = Math.max(0, num(cfg.colClear,18));  // تفراغ داخلي لليسار يبعد المبلغ عن سكرول RTL
+    var a4 = useA4(cfg);
     var css = '';
     // تقييد عرض الفاتورة على عرض الورق حتى على الشاشة (يغطي طباعة WebView) ويمنع أي تجاوز للهامش
     css += '#receipt{width:'+w+'mm!important;max-width:100%!important;box-sizing:border-box!important;overflow:hidden!important;}';
-    css += '@page{size:'+w+'mm '+(h>0?(h+'mm'):'auto')+';margin:0;}';
+    // وضع A4: الصفحة بمقاس A4 والفاتورة (بعرضها الحقيقي 58/80مم) تُوسَّط بين اليمين واليسار
+    // وضع POS: الصفحة بعرض الورق نفسه (58/80مم) بلا فراغات
+    css += a4
+      ? '@page{size:A4 portrait;margin:0;}'
+      : '@page{size:'+w+'mm '+(h>0?(h+'mm'):'auto')+';margin:0;}';
     css += '@media print{';
+    css +=   'html{background:#fff!important;height:auto!important;}';
+    if(a4){
+      // --- ورقة A4: الفاتورة في الوسط بين اليمين واليسار، وتبقى في أعلى الورقة ---
+      css +=   'body{visibility:visible!important;background:#fff!important;margin:0!important;box-sizing:border-box!important;'+
+               'width:210mm!important;min-height:296mm!important;height:auto!important;padding:12mm 0 0 0!important;'+
+               'display:flex!important;align-items:flex-start!important;justify-content:center!important;}';
+      css +=   'body>*{display:none!important;}';
+      css +=   '#receipt{display:block!important;visibility:visible!important;position:static!important;float:none!important;'+
+               'width:'+w+'mm!important;max-width:'+w+'mm!important;box-sizing:border-box!important;flex:0 0 auto!important;'+
+               'margin:0 auto!important;padding:0 '+ms+'mm 0 calc('+ms+'mm + '+clr+'px)!important;'+
+               'color:#000!important;background:#fff!important;font-family:'+ff+'!important;font-size:'+fs+'px!important;'+
+               'text-align:'+align+'!important;direction:rtl!important;overflow:hidden!important;overflow-wrap:anywhere!important;}';
+    } else {
     // نخفي بالـ display:none (وليس visibility) حتى لا تشغل العناصر المخفية مساحة
     // → يمنع خروج ورق فارغ طويل ويجعل الطول = طول الفاتورة فقط (القص بعد آخر سطر)
-    css +=   'html{background:#fff!important;height:auto!important;}';
     css +=   'body{visibility:visible!important;margin:0!important;padding:0!important;background:#fff!important;width:'+w+'mm!important;min-height:0!important;height:auto!important;}';
     css +=   'body>*{display:none!important;}';
-    var clr = Math.max(0, num(cfg.colClear,18));  // تفراغ داخلي لليسار يبعد المبلغ عن سكرول RTL
     css +=   '#receipt{display:block!important;visibility:visible!important;position:static!important;float:none!important;'+
              'width:'+w+'mm!important;max-width:'+w+'mm!important;box-sizing:border-box!important;'+
              'margin:'+mt+'mm 0 '+mb+'mm 0!important;padding:0 '+ms+'mm 0 calc('+ms+'mm + '+clr+'px)!important;'+
@@ -163,6 +198,7 @@
     css +=   '#receipt .r-line{margin-top:'+lg+'px!important;margin-bottom:'+lg+'px!important;}';
     css +=   '#receipt img.r-logo{max-width:'+(w-ms*2-4)+'mm!important;}';
     css += '}';
+    }
     css += fieldHideCss(cfg);
     return css;
   }
@@ -254,105 +290,6 @@
     return html;
   }
 
-  // تعبئة صندوق المعاينة على الشاشة بعرض/خط/محاذاة مطابقة للطباعة
-  function renderPreview(container, cfg){
-    cfg = cfg || load();
-    if(typeof container==='string') container = document.querySelector(container);
-    if(!container) return;
-    var w  = paperW(cfg);
-    var ms = num(cfg.marginSide,2);
-    var fs = num(cfg.fontSize,12);
-    var ff = fontStack(cfg.fontFamily);
-    var align = (cfg.align==='right'||cfg.align==='left') ? cfg.align : 'center';
-    container.innerHTML = '<div class="bmsprev" style="width:'+w+'mm;max-width:100%;box-sizing:border-box;'+
-      'padding:4mm '+ms+'mm;margin:0 auto;background:#fff;color:#000;direction:rtl;'+
-      'font-family:'+ff+';font-size:'+fs+'px;text-align:'+align+';'+
-      'box-shadow:0 2px 12px rgba(0,0,0,.18);border-radius:4px;position:relative;">'+ sampleReceiptHtml(cfg) +'</div>';
-    applyPrintCss(cfg); // حتى ينعكس إخفاء الحقول على المعاينة أيضاً
-    _attachDrag(container);
-    _attachSelect(container);
-  }
-
-  // ===== سحب بالماوس داخل المعاينة الحية =====
-  var _dragState = null;
-  var _selectedEl = null;
-  function _clearSel(){ if(_selectedEl){ _selectedEl.style.outline=''; _selectedEl.style.outlineOffset=''; _selectedEl=null; } }
-  function _typeOf(el){
-    if(!el || !el.className) return null;
-    var c = ' ' + el.className + ' ';
-    if(c.indexOf(' r-logo ')>=0) return 'logo';
-    if(c.indexOf(' rf-name ')>=0) return 'name';
-    if(c.indexOf(' rf-estab ')>=0) return 'estab';
-    if(c.indexOf(' rf-invno ')>=0 || c.indexOf(' rf-date ')>=0 || c.indexOf(' rf-customer ')>=0 || c.indexOf(' rf-phone ')>=0 || c.indexOf(' r-meta ')>=0) return 'meta';
-    if(c.indexOf(' rf-items ')>=0 || c.indexOf(' rf-qty ')>=0 || c.indexOf(' rf-price ')>=0) return 'items';
-    if(c.indexOf(' r-tot ')>=0 || c.indexOf(' rf-total ')>=0 || c.indexOf(' rf-paid ')>=0 || c.indexOf(' rf-remaining ')>=0 || c.indexOf(' rf-discount ')>=0) return 'totals';
-    if(c.indexOf(' r-qr ')>=0 || c.indexOf(' r-qr-cap ')>=0) return 'qr';
-    if(c.indexOf(' r-foot ')>=0 || c.indexOf(' rf-thanks ')>=0 || c.indexOf(' r-dev ')>=0 || c.indexOf(' rf-signature ')>=0) return 'footer';
-    if(c.indexOf(' r-line ')>=0) return 'line';
-    return null;
-  }
-  function _attachSelect(container){
-    var prev = container.querySelector('.bmsprev');
-    if(!prev) return;
-    prev.addEventListener('click', function(e){
-      _clearSel();
-      var cur = e.target;
-      var type = null;
-      while(cur && cur !== prev){
-        type = _typeOf(cur);
-        if(type){ break; }
-        cur = cur.parentElement;
-      }
-      if(!type){ if(typeof window.bmsOnPreviewDeselect==='function') window.bmsOnPreviewDeselect(); return; }
-      _selectedEl = cur;
-      cur.style.outline = '2px dashed #2563eb';
-      cur.style.outlineOffset = '2px';
-      if(typeof window.bmsOnPreviewSelect === 'function') window.bmsOnPreviewSelect(type);
-    });
-  }
-  // معالجات عامة (تُسجَّل مرة واحدة)
-  if(!window.__bmsDragBound){
-    window.__bmsDragBound = true;
-    document.addEventListener('mousemove', function(e){
-      if(!_dragState) return;
-      _dragState.moved = true;
-      var dx = e.clientX - _dragState.startX;
-      _dragState.el.style.transform = 'translateX(' + dx + 'px)';
-    });
-    document.addEventListener('mouseup', function(e){
-      if(!_dragState) return;
-      var st = _dragState;
-      _dragState = null;
-      st.el.style.opacity = '';
-      st.el.style.transform = '';
-      if(!st.moved) return;
-      var prev = st.el.closest('.bmsprev');
-      if(!prev) return;
-      var prevRect = prev.getBoundingClientRect();
-      var elRect = st.el.getBoundingClientRect();
-      var center = (elRect.left + elRect.width/2) - prevRect.left;
-      var third = prevRect.width / 3;
-      var newAlign = (center < third) ? 'right' : (center > 2*third) ? 'left' : 'center';
-      var alignSel = document.getElementById('pAlign');
-      if(alignSel && alignSel.value !== newAlign){
-        alignSel.value = newAlign;
-        alignSel.dispatchEvent(new Event('change', {bubbles:true}));
-      }
-    });
-  }
-  function _attachDrag(container){
-    var prev = container.querySelector('.bmsprev');
-    if(!prev) return;
-    var items = prev.querySelectorAll('[data-drag]');
-    items.forEach(function(el){
-      el.addEventListener('mousedown', function(e){
-        _dragState = { el: el, startX: e.clientX, moved: false };
-        el.style.opacity = '0.6';
-        e.preventDefault();
-      });
-    });
-  }
-
   window.BMSPrinter = {
     KEY: KEY,
     defaults: defaults,
@@ -362,7 +299,8 @@
     buildPrintCss: buildPrintCss,
     applyPrintCss: applyPrintCss,
     sampleReceiptHtml: sampleReceiptHtml,
-    renderPreview: renderPreview,
+    useA4: useA4,
+    isMobileDevice: isMobileDevice,
     _esc: esc,
     _num: num
   };

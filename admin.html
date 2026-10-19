@@ -1265,6 +1265,14 @@ body.admin-dark .settings-subhead{color:var(--ink);}
                 <input type="number" id="pPaperHeight" min="0" max="2000" step="1" placeholder="0 = تلقائي" />
               </label>
             </div>
+            <label>نوع الورق عند الطباعة
+              <select id="pA4Mode">
+                <option value="auto">تلقائي — A4 على الجوال · شريط طابعة على الكمبيوتر</option>
+                <option value="on">ورق A4 — الفاتورة في وسط الورقة</option>
+                <option value="off">شريط طابعة (POS) — الفاتورة بعرض الورق</option>
+              </select>
+            </label>
+            <small class="settings-hint" style="display:block;margin-top:-4px">على الجوال تُطبع الفواتير عادةً على ورق A4، لذلك تُوسَّط الفاتورة (80مم) بين اليمين واليسار تلقائياً وتبقى في أعلى الورقة. يمكنك فرض ذلك أو إيقافه هنا.</small>
             <label>محاذاة المحتوى
               <select id="pAlign">
                 <option value="center">وسط</option>
@@ -1400,8 +1408,8 @@ body.admin-dark .settings-subhead{color:var(--ink);}
           </div>
 
           <div class="settings-card">
-            <h3>🖼️ موضع الشعار ورمز QR (معاينة حية)</h3>
-            <small class="settings-hint" style="margin-bottom:8px;display:block">تُطبَّق على المعاينة الحية أدناه فوراً. الشعار دائري على يسار الفاتورة (بجانب بيانات المنشأة) ورمز QR على يمين الفاتورة (بجانب بياناته).</small>
+            <h3>🖼️ موضع الشعار ورمز QR</h3>
+            <small class="settings-hint" style="margin-bottom:8px;display:block">تُطبَّق على الفاتورة عند الطباعة فوراً. الشعار دائري على يسار الفاتورة (بجانب بيانات المنشأة) ورمز QR على يمين الفاتورة (بجانب بياناته).</small>
             <label class="check-row"><input type="checkbox" id="pLogoSide" /> شعار دائري على يسار الفاتورة (بجانب بيانات المنشأة)</label>
             <label class="check-row"><input type="checkbox" id="pQrSide" /> رمز QR على يمين الفاتورة (بجانب بياناته)</label>
           </div>
@@ -1414,18 +1422,6 @@ body.admin-dark .settings-subhead{color:var(--ink);}
               <button type="button" class="btn" id="pRestoreBtn">↩️ استعادة الافتراضي</button>
             </div>
             <div id="pAutoSetupHint" class="settings-hint" style="display:none;margin-top:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 12px;line-height:1.9;color:#166534"></div>
-          </div>
-        </div>
-        <div class="printer-preview" style="flex:0 0 300px;max-width:300px">
-          <div class="settings-card" style="position:sticky;top:12px">
-            <h3>👁️ معاينة حية</h3>
-            <div id="pPreview" style="background:#e9edf3;padding:14px;border-radius:8px;max-height:65vh;overflow:auto;display:flex;justify-content:center"></div>
-            <small class="settings-hint" style="display:block;margin-top:8px">💡 معاينة حية: اسحب الشعار أو رمز QR لتغيير موضعه — أو انقر على أي عنصر لإظهار إعداداته في الصندوق أدناه.</small>
-            <div id="pSelPanel" style="display:none;margin-top:10px;padding:10px;background:#f0f9ff;border:1px solid #bfdbfe;border-radius:8px">
-              <div id="pSelTitle" style="font-weight:800;color:#1e3a8a;margin-bottom:6px;font-size:13px">—</div>
-              <div id="pSelFields" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-              <small class="settings-hint" style="display:block;margin-top:6px">انقر على عنصر في المعاينة لعرض إعداداته. التعديلات تُحدِّث المعاينة فوراً.</small>
-            </div>
           </div>
         </div>
       </div>
