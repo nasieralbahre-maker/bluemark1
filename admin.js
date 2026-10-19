@@ -610,6 +610,7 @@ function fillSettingsForm(cfg){
   set('setFooter', cfg.footer);
   set('setAlign', p.align || 'center');
   chk('setLogoSide', !!(p.logoSide === true));
+  chk('setQrSide', !!(p.qrSide === true));
   // هوامش لكل موضع (مع fallback للقيم القديمة)
   const _margins = (p.margins && typeof p.margins === 'object') ? p.margins : {};
   const _defMargin = { top: p.marginTop != null ? p.marginTop : 0, side: p.marginSide != null ? p.marginSide : 4, padV: p.paddingV != null ? p.paddingV : 6 };
@@ -806,6 +807,7 @@ document.getElementById('settingsForm').onsubmit = async function(e){
       return {
         align: align,
         logoSide: !!(document.getElementById('setLogoSide') || {}).checked,
+        qrSide: !!(document.getElementById('setQrSide') || {}).checked,
         margins: margins,
         // للتوافق مع الإصدارات القديمة (تُستخدم كاحتياط)
         marginSide: active.side,
@@ -1861,7 +1863,7 @@ window.AdminUI = (function(){
     defaultPrinter:'pDefaultPrinter', copies:'pCopies', feedLines:'pFeedLines',
     qrSize:'pQrSize', qrGap:'pQrGap', lineGap:'pLineGap',
     colName:'pColName', colQty:'pColQty', colPrice:'pColPrice', colClear:'pColClear',
-    a4Mode:'pA4Mode'
+    a4Mode:'pA4Mode', scale:'pScale'
   };
   var boolIds = { silent:'pSilent', autoCut:'pAutoCut', cashDrawer:'pCashDrawer', logoSide:'pLogoSide', qrSide:'pQrSide' };
   var showIds = {
@@ -1876,6 +1878,11 @@ window.AdminUI = (function(){
   function syncCustom(){
     var sel=$('pPaper'), wrap=$('pCustomWrap');
     if(wrap) wrap.style.display = (sel && sel.value==='custom') ? 'flex' : 'none';
+  }
+  // تحديث رقم نسبة التصغير المعروض بجانب المنزلق
+  function syncScaleLabel(){
+    var sl=$('pScale'), lb=$('pScaleVal');
+    if(lb) lb.textContent = (sl ? sl.value : 100) + '%';
   }
   function fillForm(cfg){
     Object.keys(ids).forEach(function(k){ var el=$(ids[k]); if(!el) return;
@@ -1894,6 +1901,7 @@ window.AdminUI = (function(){
     }
     if(ph) ph.value = h>0 ? h : '';
     syncCustom();
+    syncScaleLabel();
   }
   function readForm(){
     var cfg = BMSPrinter.load();
@@ -1911,6 +1919,11 @@ window.AdminUI = (function(){
     var h = parseFloat(ph && ph.value)||0;
     if(h<0) h=0; if(h>2000) h=2000;
     cfg.paperHeight = h;
+    // نسبة تصغير حجم الفاتورة (30–150%)
+    var sc = parseFloat($('pScale') && $('pScale').value);
+    if(isNaN(sc) || !sc) sc = 100;
+    if(sc<30) sc=30; if(sc>150) sc=150;
+    cfg.scale = sc;
     if(cfg.copies < 1) cfg.copies = 1;
     Object.keys(boolIds).forEach(function(k){ var el=$(boolIds[k]); if(el) cfg[k]=el.checked; });
     cfg.show = cfg.show || {};
@@ -2010,10 +2023,22 @@ window.AdminUI = (function(){
     var wrap = $('tab-printer'); if(!wrap) return;
     var selPaper=$('pPaper');
     if(selPaper) selPaper.addEventListener('change', function(){ syncCustom(); });
+    var sl=$('pScale');
+    if(sl) sl.addEventListener('input', function(){ syncScaleLabel(); });
     var sv=$('pSaveBtn');
     if(sv) sv.onclick=function(){
       var c=readForm(); BMSPrinter.save(c); BMSPrinter.applyPrintCss(c);
-      if(typeof showToast==='function') showToast('تم حفظ إعدادات الطابعة على هذا الجهاز');
+      // موضع الشعار ومكان QR: نحفظهما أيضاً في السحابة لتطبيقهما على كل الأجهزة (جوال + كمبيوتر)
+      try{
+        var cur = (typeof RESTAURANT !== 'undefined' && RESTAURANT) ? RESTAURANT : {};
+        var pr = Object.assign({}, cur.print || {}, { logoSide: c.logoSide === true, qrSide: c.qrSide === true });
+        var merged = Object.assign({}, cur, { print: pr });
+        Promise.resolve(DB.saveSettings(merged)).then(function(saved){
+          if(typeof RESTAURANT !== 'undefined' && saved) RESTAURANT.print = saved.print || pr;
+          if(typeof showToast==='function') showToast('✅ تم حفظ إعدادات الطابعة — وطبّقت موضع الشعار و QR على كل الأجهزة');
+        }).catch(function(){});
+      }catch(e){}
+      if(typeof showToast==='function') setTimeout(function(){ showToast('تم حفظ إعدادات الطابعة على هذا الجهاز'); }, 60);
     };
     var rp=$('pRefreshPrinters'); if(rp) rp.onclick=refreshPrinters;
 

@@ -8,7 +8,7 @@ let RESTAURANT = {
   currency: 'YER',           // العملة الافتراضية: الريال اليمني
   footer: 'شكراً لزيارتكم ❤️',
   exchanges: [ { name: 'شركة المشقاص للصرافة', color: '#16a34a' } ],
-  print: { align:'center', logoSide:false, marginTop:0, marginSide:4, paddingV:6, fontSize:12,
+  print: { align:'center', logoSide:false, qrSide:false, marginTop:0, marginSide:4, paddingV:6, fontSize:12,
     margins: { right:{top:0,side:4,padV:6}, center:{top:0,side:4,padV:6}, left:{top:0,side:4,padV:6} } },
   fonts: { base:100, heading:100, table:100, button:100, input:100 },
   uiStyle: 'old', // 'old' | 'new' (شكل النظام)
@@ -817,7 +817,9 @@ function printReceipt(order){
   const _logoSideLocal = (pcfg && pcfg.logoSide === true);
   const _logoSideShared = (RESTAURANT.print && RESTAURANT.print.logoSide === true);
   const _logoSide = (_logoSideLocal || _logoSideShared) && (inv.showLogo !== false) && RESTAURANT.logo;
-  const _qrSide = (pcfg && pcfg.qrSide === true);
+  const _qrSideLocal = (pcfg && pcfg.qrSide === true);
+  const _qrSideShared = (RESTAURANT.print && RESTAURANT.print.qrSide === true);
+  const _qrSide = _qrSideLocal || _qrSideShared;
   if(_logoSide){
     blocks.header =
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +

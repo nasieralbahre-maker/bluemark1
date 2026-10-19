@@ -186,7 +186,7 @@ const DB = (function(){
       title: '',                // عنوان مخصّص (اختياري)
       subtitle: ''              // نص فرعي مخصّص (اختياري)
     },
-    print: { align:'center', logoSide:false, marginTop:0, marginSide:4, paddingV:6, fontSize:12,
+    print: { align:'center', logoSide:false, qrSide:false, marginTop:0, marginSide:4, paddingV:6, fontSize:12,
       margins: { right:{top:0,side:4,padV:6}, center:{top:0,side:4,padV:6}, left:{top:0,side:4,padV:6} } },
     // ----- بداية الأسبوع في تقارير المصاريف (0=الأحد ... 6=السبت) -----
     weekStartDay: 6

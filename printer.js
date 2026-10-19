@@ -18,6 +18,7 @@
     marginBottom: 0,         // مم
     marginSide: 2,           // مم
     fontSize: 12,            // px
+    scale: 100,              // تصغير حجم الفاتورة كاملاً (نسبة مئوية 30–150)
     fontFamily: 'cairo',     // cairo | tahoma | monospace
     align: 'center',         // right | center | left
     logoSide: false,          // شعار دائري على يسار الفاتورة (بجانب بيانات المنشأة)
@@ -141,14 +142,22 @@
     var align = (cfg.align==='right'||cfg.align==='left') ? cfg.align : 'center';
     var clr = Math.max(0, num(cfg.colClear,18));  // تفراغ داخلي لليسار يبعد المبلغ عن سكرول RTL
     var a4 = useA4(cfg);
+    // ===== معامل تصغير حجم الفاتورة (نسبة مئوية 30–150) =====
+    // يُطبَّق على كل المقاسات معاً (العرض، الخط، المسافات، الأعمدة، QR) فيصغرالفاتورة كاملة
+    var sc = Math.max(0.3, Math.min(1.5, num(cfg.scale,100) / 100));
+    var wS  = w * sc;                       // عرض الفاتورة بعد التصغير (مم)
+    var msS = ms * sc, clrS = clr * sc;     // الهوامش والتفراغ (مُصغَّرة)
+    var fsS = fs * sc;                      // حجم الخط (مُصغَّر)
     var css = '';
     // تقييد عرض الفاتورة على عرض الورق حتى على الشاشة (يغطي طباعة WebView) ويمنع أي تجاوز للهامش
-    css += '#receipt{width:'+w+'mm!important;max-width:100%!important;box-sizing:border-box!important;overflow:hidden!important;}';
+    css += '#receipt{width:'+wS+'mm!important;max-width:100%!important;box-sizing:border-box!important;overflow:hidden!important;}';
     // وضع A4: الصفحة بمقاس A4 والفاتورة (بعرضها الحقيقي 58/80مم) تُوسَّط بين اليمين واليسار
     // وضع POS: الصفحة بعرض الورق نفسه (58/80مم) بلا فراغات
+    //   إن تكبير الفاتورة تجاوز عرض الورق نكبّر الصفحة أيضاً حتى لا يُقص المحتوى
+    var pageW = Math.max(w, wS);
     css += a4
       ? '@page{size:A4 portrait;margin:0;}'
-      : '@page{size:'+w+'mm '+(h>0?(h+'mm'):'auto')+';margin:0;}';
+      : '@page{size:'+pageW+'mm '+(h>0?(h+'mm'):'auto')+';margin:0;}';
     css += '@media print{';
     css +=   'html{background:#fff!important;height:auto!important;}';
     if(a4){
@@ -158,9 +167,9 @@
                'display:flex!important;align-items:flex-start!important;justify-content:center!important;}';
       css +=   'body>*{display:none!important;}';
       css +=   '#receipt{display:block!important;visibility:visible!important;position:static!important;float:none!important;'+
-               'width:'+w+'mm!important;max-width:'+w+'mm!important;box-sizing:border-box!important;flex:0 0 auto!important;'+
-               'margin:0 auto!important;padding:0 '+ms+'mm 0 calc('+ms+'mm + '+clr+'px)!important;'+
-               'color:#000!important;background:#fff!important;font-family:'+ff+'!important;font-size:'+fs+'px!important;'+
+               'width:'+wS+'mm!important;max-width:'+wS+'mm!important;box-sizing:border-box!important;flex:0 0 auto!important;'+
+               'margin:0 auto!important;padding:0 '+msS+'mm 0 calc('+msS+'mm + '+clrS+'px)!important;'+
+               'color:#000!important;background:#fff!important;font-family:'+ff+'!important;font-size:'+fsS+'px!important;'+
                'text-align:'+align+'!important;direction:rtl!important;overflow:hidden!important;overflow-wrap:anywhere!important;}';
     } else {
     // نخفي بالـ display:none (وليس visibility) حتى لا تشغل العناصر المخفية مساحة
@@ -168,23 +177,23 @@
     css +=   'body{visibility:visible!important;margin:0!important;padding:0!important;background:#fff!important;width:'+w+'mm!important;min-height:0!important;height:auto!important;}';
     css +=   'body>*{display:none!important;}';
     css +=   '#receipt{display:block!important;visibility:visible!important;position:static!important;float:none!important;'+
-             'width:'+w+'mm!important;max-width:'+w+'mm!important;box-sizing:border-box!important;'+
-             'margin:'+mt+'mm 0 '+mb+'mm 0!important;padding:0 '+ms+'mm 0 calc('+ms+'mm + '+clr+'px)!important;'+
-             'color:#000!important;background:#fff!important;font-family:'+ff+'!important;font-size:'+fs+'px!important;'+
+             'width:'+wS+'mm!important;max-width:'+wS+'mm!important;box-sizing:border-box!important;'+
+             'margin:'+(mt*sc)+'mm auto '+(mb*sc)+'mm auto!important;padding:0 '+msS+'mm 0 calc('+msS+'mm + '+clrS+'px)!important;'+
+             'color:#000!important;background:#fff!important;font-family:'+ff+'!important;font-size:'+fsS+'px!important;'+
              'text-align:'+align+'!important;direction:rtl!important;overflow:hidden!important;overflow-wrap:anywhere!important;}';
     css +=   '#receipt *{visibility:visible!important;}';
     css +=   '#receipt{page-break-inside:auto!important;break-inside:auto!important;page-break-after:avoid!important;break-after:avoid!important;}';
     css +=   '#receipt tr,#receipt td,#receipt th{page-break-inside:avoid!important;break-inside:avoid!important;}';
     css +=   '#receipt>*:last-child{margin-bottom:0!important;padding-bottom:0!important;margin-top:0!important;}';
-    var qg = num(cfg.qrGap,6), qs = num(cfg.qrSize,120);
+    var qg = num(cfg.qrGap,6)*sc, qs = num(cfg.qrSize,120)*sc;
     css +=   '#receipt .r-qr{margin:0!important;padding:'+qg+'px 0 0 0!important;border-top:none!important;page-break-before:avoid!important;break-before:avoid!important;}';
     css +=   '#receipt .r-qr img{margin:0!important;width:'+qs+'px!important;height:'+qs+'px!important;}';
     css +=   '#receipt .r-qr-cap{margin:2px 0 0 0!important;}';
-    var lg = num(cfg.lineGap,4);
+    var lg = num(cfg.lineGap,4)*sc;
     // أعمدة قابلة للضبط من الإعدادات: الصنف (0 = مرن)، الكمية، المبلغ — بعرض ثابت لا يتمدّد فيخرج السعر خارج الهامش
-    var nameW = Math.max(0, num(cfg.colName,0));
-    var qtyW  = Math.max(6,  num(cfg.colQty,22));
-    var priceW= Math.max(20, num(cfg.colPrice,92));
+    var nameW = Math.max(0, num(cfg.colName,0))*sc;
+    var qtyW  = Math.max(6,  num(cfg.colQty,22))*sc;
+    var priceW= Math.max(20, num(cfg.colPrice,92))*sc;
     var nameCss = (nameW > 0) ? ('width:'+nameW+'px!important;') : ('width:auto!important;');
     css +=   '#receipt table{width:100%!important;border-collapse:collapse!important;table-layout:fixed!important;}';
     css +=   '#receipt table th:first-child,#receipt table td:first-child{'+nameCss+'text-align:right!important;}';
@@ -196,7 +205,7 @@
     css +=   '#receipt .r-tot{flex-wrap:wrap!important;}';
     css +=   '#receipt .r-tot span{word-break:break-all!important;word-wrap:break-word!important;overflow-wrap:anywhere!important;min-width:0!important;max-width:100%!important;}';
     css +=   '#receipt .r-line{margin-top:'+lg+'px!important;margin-bottom:'+lg+'px!important;}';
-    css +=   '#receipt img.r-logo{max-width:'+(w-ms*2-4)+'mm!important;}';
+    css +=   '#receipt img.r-logo{max-width:'+(wS-msS*2-4)+'mm!important;}';
     css += '}';
     }
     css += fieldHideCss(cfg);

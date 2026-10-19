@@ -1272,6 +1272,13 @@ body.admin-dark .settings-subhead{color:var(--ink);}
                 <option value="off">شريط طابعة (POS) — الفاتورة بعرض الورق</option>
               </select>
             </label>
+            <label>تصغير حجم الفاتورة كاملاً
+              <span style="display:flex;align-items:center;gap:10px">
+                <input type="range" id="pScale" min="30" max="150" step="5" style="flex:1;accent-color:#1e4ed0" />
+                <b id="pScaleVal" style="min-width:52px;text-align:center;background:#eef3fe;border:1.5px solid #dbe6fc;border-radius:8px;padding:4px 6px;font-size:13px;color:#1e4ed0">100%</b>
+              </span>
+            </label>
+            <small class="settings-hint" style="display:block;margin-top:-4px">يقلّص الفاتورة بالكامل دفعةً واحدة (الخط، المسافات، أعمدة الجدول، حجم QR والشعار) بمقدار النسبة — مفيد لمطابقة فاتورة كاشير بعرض 58مم على ورق 80مم.</small>
             <small class="settings-hint" style="display:block;margin-top:-4px">على الجوال تُطبع الفواتير عادةً على ورق A4، لذلك تُوسَّط الفاتورة (80مم) بين اليمين واليسار تلقائياً وتبقى في أعلى الورقة. يمكنك فرض ذلك أو إيقافه هنا.</small>
             <label>محاذاة المحتوى
               <select id="pAlign">
@@ -1356,8 +1363,9 @@ body.admin-dark .settings-subhead{color:var(--ink);}
                 <option value="left">يسار</option>
               </select>
             </label>
-            <label class="check-row"><input type="checkbox" id="setLogoSide" /> شعار على يسار الفاتورة (بجانب بيانات المنشأة — بدل أن يأخذ مساحة أولاً)</label>
-            <small class="settings-hint" style="margin:6px 0 10px;display:block">حدد الهوامش لكل موضع على حدة — سيُطبَّق موضع الفاتورة (يمين/وسط/يسار) مع هوامشه المخصّصة.</small>
+            <label class="check-row"><input type="checkbox" id="setLogoSide" /> شعار دائري على يسار الفاتورة (بجانب بيانات المنشأة)</label>
+            <label class="check-row"><input type="checkbox" id="setQrSide" /> رمز QR على يمين الفاتورة (بجانب بياناته)</label>
+            <small class="settings-hint" style="margin:6px 0 10px;display:block">هذه الإعدادات تُحفظ في السحابة فتُطبَّق على <b>كل الأجهزة</b> (الكمبيوتر والجوال). حدّد الهوامش لكل موضع على حدة — سيُطبَّق موضع الفاتورة (يمين/وسط/يسار) مع هوامشه المخصّصة.</small>
             <div class="settings-card" style="background:#f8fafc;margin:8px 0">
               <h3 style="font-size:13px;margin:0 0 8px">يمين</h3>
               <div class="form-row">
