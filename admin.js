@@ -1880,6 +1880,48 @@ window.AdminUI = (function(){
     if(wrap) wrap.style.display = (sel && sel.value==='custom') ? 'flex' : 'none';
   }
   // تحديث رقم نسبة التصغير المعروض بجانب المنزلق
+  // ===== مقاسات عناصر الفاتورة =====
+  // كل عنصر له مفتاح (class) وحجم افتراضي؛ نخزّن الأحجام المغيّرة فقط
+  function elemDefs(){ return (window.BMSPrinter && BMSPrinter.ELEMENTS) ? BMSPrinter.ELEMENTS : []; }
+  function currentElemSizes(){
+    var c = BMSPrinter.load();
+    return (c && c.elementSizes && typeof c.elementSizes === 'object') ? c.elementSizes : {};
+  }
+  // بناء حقول المقاسات (شبكة) — تُعاد بناؤها عند كل تعبئة
+  function buildElemInputs(){
+    var host = $('pElemSizes'); if(!host) return;
+    var defs = elemDefs();
+    // إن كانت هناك تعديلات غير محفوظة نعرضها، وإلا نعرض المحفوظ
+    var saved = (_pendingElemSizes !== null) ? _pendingElemSizes : currentElemSizes();
+    host.innerHTML = defs.map(function(el){
+      var v = (saved[el.key] != null) ? saved[el.key] : el.def;
+      return '<label data-elem-key="'+el.key+'" style="display:flex;align-items:center;justify-content:space-between;gap:8px;'+
+             'background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:6px 10px;font-size:12.5px;font-weight:700;color:#334155">'+
+               '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+el.label+'</span>'+
+               '<input type="number" data-elem-size="'+el.key+'" value="'+v+'" min="5" max="60" step="1" '+
+                 'style="width:62px;flex:none;border:1.5px solid #dbe6fc;border-radius:8px;padding:4px 6px;font:inherit;font-size:13px;text-align:center;background:#fff">'+
+             '</label>';
+    }).join('');
+    // ربط التغييرات → يُحدّث البيانات فقط (تُطبَّق عند الضغط على «حفظ»)
+    host.querySelectorAll('[data-elem-size]').forEach(function(inp){
+      inp.addEventListener('input', function(){
+        markElemCustom(inp.getAttribute('data-elem-size'), inp.value);
+      });
+      inp.addEventListener('change', function(){
+        markElemCustom(inp.getAttribute('data-elem-size'), inp.value);
+      });
+    });
+  }
+  // تسجيل المقاس المغيّر في الكائن المؤقت (يُحفظ مع الإعدادات)
+  var _pendingElemSizes = null;
+  function markElemCustom(key, val){
+    if(!_pendingElemSizes) _pendingElemSizes = Object.assign({}, currentElemSizes());
+    var v = parseFloat(val);
+    if(isNaN(v) || v <= 0) delete _pendingElemSizes[key];
+    else _pendingElemSizes[key] = Math.max(5, Math.min(60, v));
+  }
+  function pendingElemSizes(){ return _pendingElemSizes || currentElemSizes(); }
+
   function syncScaleLabel(){
     var sl=$('pScale'), lb=$('pScaleVal');
     if(lb) lb.textContent = (sl ? sl.value : 100) + '%';
@@ -1902,6 +1944,7 @@ window.AdminUI = (function(){
     if(ph) ph.value = h>0 ? h : '';
     syncCustom();
     syncScaleLabel();
+    buildElemInputs();
   }
   function readForm(){
     var cfg = BMSPrinter.load();
@@ -1924,6 +1967,11 @@ window.AdminUI = (function(){
     if(isNaN(sc) || !sc) sc = 100;
     if(sc<30) sc=30; if(sc>150) sc=150;
     cfg.scale = sc;
+    // مقاسات كل نص في الفاتورة
+    cfg.elementSizes = Object.assign({}, pendingElemSizes());
+    // مقاس الشعار
+    var lgs = parseFloat($('pLogoSize') && $('pLogoSize').value);
+    cfg.logoSize = (isNaN(lgs) || !lgs) ? 60 : Math.max(20, Math.min(200, lgs));
     if(cfg.copies < 1) cfg.copies = 1;
     Object.keys(boolIds).forEach(function(k){ var el=$(boolIds[k]); if(el) cfg[k]=el.checked; });
     cfg.show = cfg.show || {};
@@ -2025,21 +2073,55 @@ window.AdminUI = (function(){
     if(selPaper) selPaper.addEventListener('change', function(){ syncCustom(); });
     var sl=$('pScale');
     if(sl) sl.addEventListener('input', function(){ syncScaleLabel(); });
+    // إعادة كل المقاسات للافتراضي
+    var per=$('pElemReset');
+    if(per) per.onclick=function(){
+      _pendingElemSizes = {};
+      buildElemInputs();
+      if(typeof showToast==='function') showToast('↩️ أُعيدت مقاسات النصوص للافتراضي — اضغط «حفظ» للتثبيت');
+    };
     var sv=$('pSaveBtn');
     if(sv) sv.onclick=function(){
       var c=readForm(); BMSPrinter.save(c); BMSPrinter.applyPrintCss(c);
-      // موضع الشعار ومكان QR: نحفظهما أيضاً في السحابة لتطبيقهما على كل الأجهزة (جوال + كمبيوتر)
+      _pendingElemSizes = null;   // حُفظت — نبدأ من جديد
+      buildElemInputs();
+      // ════════════════════════════════════════════════════════════════════════════
+      // حفظ إعدادات الطابعة — آمن تماماً ولا يمسح أي بيانات من النظام:
+      // 1) المقاسات، paper dimensions، scale، elementSizes، logoSize → تُحفظ محلياً في bms_printer_cfg
+      //    (م speciale بكل جهاز)، ولا تمس بيانات النظام أبداً.
+      // 2) posizione الشعار (logoSide) و QR (qrSide) → تُحدّث في settings_config
+      //    مع الحفاظ على جميع الحقول الأخرى كما هي (اسم المؤسسة، الهاتف، العنوان، إلخ).
+      // ═════════════════════════════════════════════════════════════════════════════
       try{
-        var cur = (typeof RESTAURANT !== 'undefined' && RESTAURANT) ? RESTAURANT : {};
-        var pr = Object.assign({}, cur.print || {}, { logoSide: c.logoSide === true, qrSide: c.qrSide === true });
-        var merged = Object.assign({}, cur, { print: pr });
-        Promise.resolve(DB.saveSettings(merged)).then(function(saved){
-          if(typeof RESTAURANT !== 'undefined' && saved) RESTAURANT.print = saved.print || pr;
-          if(typeof showToast==='function') showToast('✅ تم حفظ إعدادات الطابعة — وطبّقت موضع الشعار و QR على كل الأجهزة');
-        }).catch(function(){});
-      }catch(e){}
+        // قراءة الإعدادات من localStorage مباشرة (مضمون وموثوق، لا يعتمد على Firestore)
+        var currentSettings = {};
+        try{ currentSettings = JSON.parse(localStorage.getItem('settings_config') || '{}'); }catch(e){ currentSettings = {}; }
+        // دمج حقل print فقط مع الاحتفاظ بكل الحقول الأخرى كما هي
+        var merged = Object.assign({}, currentSettings, {
+          print: Object.assign({}, currentSettings.print || {}, {
+            logoSide: c.logoSide === true,
+            qrSide:   c.qrSide === true
+          })
+        });
+        // حفظ في localStorage فوراً
+        try{ localStorage.setItem('settings_config', JSON.stringify(merged)); }catch(e){}
+        // محاولة مزامنة مع Firestore إذا كان متاحاً (للأجهزة الأخرى)
+        if(typeof DB !== 'undefined' && DB.saveSettings){
+          DB.saveSettings(merged).then(function(saved){
+            if(typeof settingsCache !== 'undefined' && saved) settingsCache = saved;
+            if(typeof showToast==='function') showToast('✅ تم حفظ إعدادات الطابعة — posicion الشعار و QR نُشرت لكل الأجهزة');
+          }).catch(function(){
+            if(typeof showToast==='function') showToast('⚠️ تم الحفظ محلياً — تعذّرت المزامنة مع السحابة');
+          });
+        } else {
+          if(typeof showToast==='function') showToast('✅ تم حفظ إعدادات الطابعة على هذا الجهاز');
+        }
+      }catch(e){
+        if(typeof showToast==='function') showToast('⚠️ تعذر حفظ موضع الشعار/QR');
+      }
       if(typeof showToast==='function') setTimeout(function(){ showToast('تم حفظ إعدادات الطابعة على هذا الجهاز'); }, 60);
     };
+
     var rp=$('pRefreshPrinters'); if(rp) rp.onclick=refreshPrinters;
 
     // ⚙️ ضبط تلقائي للطابعة — يضبط كل ما يتحكم فيه التطبيق تلقائياً
@@ -2083,6 +2165,6 @@ window.AdminUI = (function(){
       (function loop(i){ if(i<=0) return; window.print(); if(i>1) setTimeout(function(){ loop(i-1); }, 400); })(n);
     }catch(e){ try{ window.print(); }catch(_){} }
   };
-  try{ fillForm(BMSPrinter.load()); bind(); /* لا معاينة */; refreshPrinters(); }
+  try{ fillForm(BMSPrinter.load()); bind(); refreshPrinters(); }
   catch(e){ console.error('[BMSPrinter] فشل تهيئة إعدادات الطابعة:', e); }
 })();

@@ -1420,6 +1420,21 @@ body.admin-dark .settings-subhead{color:var(--ink);}
             <small class="settings-hint" style="margin-bottom:8px;display:block">تُطبَّق على الفاتورة عند الطباعة فوراً. الشعار دائري على يسار الفاتورة (بجانب بيانات المنشأة) ورمز QR على يمين الفاتورة (بجانب بياناته).</small>
             <label class="check-row"><input type="checkbox" id="pLogoSide" /> شعار دائري على يسار الفاتورة (بجانب بيانات المنشأة)</label>
             <label class="check-row"><input type="checkbox" id="pQrSide" /> رمز QR على يمين الفاتورة (بجانب بياناته)</label>
+            <div class="form-row" style="margin-top:8px">
+              <label>مقاس الشعار (px)<input type="number" id="pLogoSize" min="20" max="200" step="2" /></label>
+              <label>مقاس رمز QR (px)<input type="number" id="pQrSize" min="40" max="200" step="2" /></label>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h3>🔤 مقاسات نصوص الفاتورة</h3>
+            <small class="settings-hint" style="margin-bottom:10px;display:block">
+              اضبط مقاس كل نص في الفاتورة على حدة (بالبكسل). تُطبَّق على الفاتورة عند الطباعة في كل الأجهزة.
+            </small>
+            <div id="pElemSizes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px 14px"></div>
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+              <button type="button" class="btn" id="pElemReset">↩️ إعادة كل المقاسات للافتراضي</button>
+            </div>
           </div>
 
           <div class="settings-card">
@@ -1581,7 +1596,7 @@ body.admin-dark .settings-subhead{color:var(--ink);}
 
 <div class="toast" id="toast"></div>
 <!-- عنصر الفاتورة للطباعة التجريبية (مخفي على الشاشة) -->
-<div id="receipt" class="receipt" style="display:none"></div>
+<div id="receipt" class="receipt bmsreceipt" style="display:none"></div>
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
