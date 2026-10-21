@@ -1325,6 +1325,8 @@ async function openQrScanner(){
   const btn = document.getElementById('scanBtn');
   if(!btn) return;
   btn.onclick = function(){
+    // تسجيل الحساب الحالي حتى تصل المسحات إلى نفس الحساب على هذا الجهاز
+    try{ localStorage.setItem('pos_scan_user', currentUserName()); }catch(e){}
     const small = (window.matchMedia && window.matchMedia('(max-width:860px)').matches) || (innerWidth < 860);
     try{
       if(small){
@@ -1375,23 +1377,35 @@ async function openQrScanner(){
 // ===== استقبال مسح الباركود من الجوال وإضافته للطلب تلقائياً =====
 // الجوال يفتح صفحة scan.html ويمسح الباركود بكاميرته، فيصل الكود إلى الكمبيوتر فوراً
 // (عبر Firestore — يعمل على نفس الشبكة أو عبر الإنترنت) ويضاف الصنف للطلب الحالي.
+// ★ كل مسح يخص الحساب الذي مسح فقط: يذهب إلى الجهاز الذي هذا الحساب مسجّل فيه.
 let _scanListenerStarted = false;
+function currentUserName(){
+  try{
+    return (typeof currentPosUser!=='undefined' && currentPosUser) ? (currentPosUser.username||'') : '';
+  }catch(e){ return ''; }
+}
 function startRemoteScanListener(){
   if(_scanListenerStarted) return;
   if(typeof DB === 'undefined' || typeof DB.onScans !== 'function') return;
   _scanListenerStarted = true;
   const startedAt = Date.now();
-  let lastTs = startedAt;
+  const OLD = 15 * 60 * 1000;            // تُهمل المسحات الأقدم من ١٥ دقيقة
+  let lastTs = 0;
   try{
     DB.onScans(function(list){
       (list || []).forEach(function(s){
         if(!s || !s.code) return;
         const ts = Number(s.ts) || 0;
-        if(ts < startedAt){                       // بقايا من جلسة سابقة → تنظيف
+        if(!ts) return;
+        const by = String(s.by || '').trim();
+        const me = currentUserName();
+        // مسحُ حساب آخر ⇒ لا يظهر في هذا الجهاز (سيصل لجهاز ذلك الحساب)
+        if(by && by !== me) return;
+        if(ts < startedAt - OLD){          // بقايا قديمة ⇒ تنظيف
           try{ if(DB.deleteScan) DB.deleteScan(s.id); }catch(e){}
           return;
         }
-        if(ts <= lastTs) return;                 // مكرر
+        if(ts <= lastTs) return;          // مكرر
         lastTs = ts;
         handleRemoteScan(s);
       });
