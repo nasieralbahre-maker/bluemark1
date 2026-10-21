@@ -149,6 +149,7 @@ async function showDash(){
   dash.style.display = 'flex';
   showCloudBadge();
   showUserBadge();
+  if(window.AdminAccounts) window.AdminAccounts.fill();
   applyPermissions();
   subscribe();
   if(pendingTab){ activateRequestedTab(pendingTab); pendingTab = ''; }
@@ -197,9 +198,12 @@ function applyPermissions(){
       ? ((currentUser && currentUser.role === 'مدير') || perms.users === true)
       : (tab === 'printer')
       ? ((currentUser && currentUser.role === 'مدير') || perms.settings === true)
-      // تبويبا إدارة المصاريف وتقارير المصاريف: للمدير فقط
-      : (tab === 'expenses' || tab === 'expreports')
+      // تبويبا إدارة المصاريف وتقارير المصاريف + النسخ الاحتياطي: للمدير فقط
+      : (tab === 'expenses' || tab === 'expreports' || tab === 'backup')
       ? ((currentUser && currentUser.role === 'مدير') === true)
+      // إدارة الحسابات: متاح لكل مستخدم (لتغيير كلمة مروره وإعدادات لوحته)
+      : (tab === 'accounts')
+      ? true
       : (perms[tab] === true);
     link.style.display = allowed ? '' : 'none';
     if(allowed && !firstAllowed) firstAllowed = tab;
@@ -211,6 +215,7 @@ function applyPermissions(){
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     const sec = document.getElementById('tab-' + firstAllowed);
     if(sec) sec.classList.add('active');
+    if(typeof syncSaveBar === 'function') syncSaveBar(firstAllowed);
   }
 }
 
@@ -225,10 +230,31 @@ document.getElementById('loginForm').onsubmit = function(e){
     document.getElementById('loginErr').textContent = '';
     document.getElementById('pwd').value = '';
     showDash();
+    // تسجيل الدخول في سجل النشاط ⇒ يصل إشعار للمدير في صفحة الكاشير
+    try{
+      if(window.DB && typeof DB.addActivity === 'function'){
+        DB.addActivity({
+          user: u.name || u.username, username: u.username, role: u.role || '',
+          event: 'login', action: 'تسجيل دخول (لوحة التحكم)',
+          net: '—', online: true, did: adminDeviceId(), ts: Date.now()
+        });
+      }
+    }catch(e2){}
   } else {
     document.getElementById('loginErr').textContent = 'اسم المستخدم أو كلمة المرور غير صحيحة';
   }
 };
+// معرّف الجهاز — نفس مفتاح صفحة الكاشير (لتمييز دخولي أنا عن دخول غيري)
+function adminDeviceId(){
+  try{
+    var d = localStorage.getItem('pos_device_id');
+    if(!d){
+      d = 'D' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+      localStorage.setItem('pos_device_id', d);
+    }
+    return d;
+  }catch(e){ return 'D-UNKNOWN'; }
+}
 document.getElementById('logoutBtn').onclick = function(){
   sessionStorage.removeItem('admin_user');
   currentUser = null;
@@ -270,6 +296,11 @@ function subscribe(){
 }
 
 // ===== Tabs =====
+// شريط حفظ الإعدادات: يظهر فقط مع تبويب الإعدادات
+function syncSaveBar(tab){
+  const bar = document.getElementById('settingsSaveBar');
+  if(bar) bar.classList.toggle('show', tab === 'settings');
+}
 document.querySelectorAll('.side-link[data-tab]').forEach(btn => {
   btn.onclick = () => {
     document.querySelectorAll('.side-link[data-tab]').forEach(b => b.classList.remove('active'));
@@ -277,6 +308,8 @@ document.querySelectorAll('.side-link[data-tab]').forEach(btn => {
     const tab = btn.dataset.tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     document.getElementById('tab-' + tab).classList.add('active');
+    syncSaveBar(tab);
+    if(tab === 'accounts' && window.AdminAccounts) window.AdminAccounts.fill();
   };
 });
 
@@ -379,6 +412,7 @@ function renderMenuTable(){
       '<td>' + esc(item.name) + '</td>' +
       '<td>' + esc(item.cat) + '</td>' +
       '<td><input type="number" class="price-input" value="' + item.price + '" min="0" step="0.5" data-price="' + item.id + '" /></td>' +
+      '<td><input type="text" class="bc-input" value="' + esc(item.barcode||'') + '" placeholder="—" data-barcode="' + item.id + '" /></td>' +
       '<td class="wrap-cell">' + (item.wrapped ? '🎁' : '—') + '</td>' +
       '<td><button class="avail-toggle ' + (item.available!==false?'on':'off') + '" data-avail="' + item.id + '"></button></td>' +
       '<td><div class="row-actions">' +
@@ -386,6 +420,7 @@ function renderMenuTable(){
         '<button class="icon-btn del" data-remove="' + item.id + '">🗑️</button>' +
       '</div></td>';
     tr.querySelector('[data-price]').onchange = (e) => updatePrice(item.id, e.target.value);
+    tr.querySelector('[data-barcode]').onchange = (e) => updateBarcode(item.id, e.target.value);
     tr.querySelector('[data-avail]').onclick = () => toggleAvail(item.id);
     tr.querySelector('[data-edit]').onclick = () => openItemModal(item.id);
     tr.querySelector('[data-remove]').onclick = () => removeItem(item.id);
@@ -400,6 +435,13 @@ function updatePrice(id, val){
   const price = Math.max(0, parseFloat(val) || 0);
   const it = menuCache.find(m => m.id === id);
   if(it){ it.price = price; persistMenu('تم تحديث السعر'); }
+}
+function updateBarcode(id, val){
+  const code = String(val || '').trim();
+  const it = menuCache.find(m => m.id === id);
+  if(!it) return;
+  it.barcode = code;
+  persistMenu(code ? 'تم حفظ الباركود ✓' : 'تم مسح الباركود');
 }
 function toggleAvail(id){
   const it = menuCache.find(m => m.id === id);
@@ -427,11 +469,13 @@ function openItemModal(id){
     document.getElementById('itemDesc').value = it.desc || '';
     document.getElementById('itemPrice').value = it.price;
     document.getElementById('itemEmoji').value = it.emoji || '';
+    document.getElementById('itemBarcode').value = it.barcode || '';
     document.getElementById('itemAvail').checked = it.available !== false;
     document.getElementById('itemWrapped').checked = !!it.wrapped;
   } else {
     document.getElementById('itemForm').reset();
     document.getElementById('itemId').value = '';
+    document.getElementById('itemBarcode').value = '';
     document.getElementById('itemAvail').checked = true;
     document.getElementById('itemWrapped').checked = false;
   }
@@ -446,6 +490,7 @@ document.getElementById('itemForm').onsubmit = function(e){
     desc: document.getElementById('itemDesc').value.trim(),
     price: Math.max(0, parseFloat(document.getElementById('itemPrice').value) || 0),
     emoji: document.getElementById('itemEmoji').value.trim() || '🍽️',
+    barcode: document.getElementById('itemBarcode').value.trim(),
     available: document.getElementById('itemAvail').checked,
     wrapped: document.getElementById('itemWrapped').checked
   };
@@ -528,7 +573,7 @@ const SETTINGS_SECTIONS = [
   {id:'all',    label:'الكل', match:function(){ return true; }},
   {id:'store',  label:'🏪 المتجر والفاتورة', kw:['بيانات النظام','ترويسة','الطباعة','الضريبة','خانات إضافية','الفاتورة المتقدمة']},
   {id:'pos',    label:'🧾 الكاشير والأزرار', kw:['الدفع والطباعة','أزرار نوع الطلب','أزرار الواجهة','ترتيب قائمة','الإيداع']},
-  {id:'look',   label:'🎨 المظهر والتجربة', kw:['تخصيص الواجهة','تجربة الاستخدام','الخطوط','توفير البيانات']},
+  {id:'look',   label:'🎨 المظهر والتجربة', kw:['تخصيص الواجهة','تجربة الاستخدام','الخطوط','توفير البيانات','خلفية الكاشير']},
   {id:'comm',   label:'🔔 الإشعارات والدردشة', kw:['إشعارات الطلبات','دردشة']},
   {id:'login',  label:'🔐 شاشة الدخول', kw:['شاشة تسجيل الدخول']},
   {id:'ops',    label:'⚙️ العمليات والبيانات', kw:['الفتح التلقائي','استمارة عميل','النسخ الاحتياطي','المحو التلقائي','Netlify']}
@@ -573,6 +618,7 @@ function fillSettingsForm(cfg){
   chk('setAllowDeposit', cfg.allowDeposit !== false);
   chk('setDirectPrint', cfg.directPrint === true);
   chk('setQtyEdit', cfg.qtyEdit !== false);
+  chk('setPriceEdit', cfg.priceEdit !== false);
   chk('setNotifEnabled', cfg.notifEnabled !== false);
   chk('setNotifSound', cfg.notifSound !== false);
   chk('setShowVat', cfg.showVat === true);
@@ -601,6 +647,19 @@ function fillSettingsForm(cfg){
   set('setDevName', cfg.devName);
   currentLogo = cfg.logo || '';
   updateLogoPreview();
+  // ===== خلفية الكاشير (شعار خفيف + نص) =====
+  const wm = cfg.watermark || {};
+  chk('setWmEnabled', wm.enabled !== false);
+  set('setWmText', (wm.text != null ? wm.text : 'حلويات العلامة الزرقاء'));
+  set('setWmOpacity', wm.opacity != null ? wm.opacity : 12);
+  set('setWmSize', wm.size != null ? wm.size : 140);
+  set('setWmAlignX', wm.alignX || 'center');
+  set('setWmAlignY', wm.alignY || 'center');
+  set('setWmMarginX', wm.marginX != null ? wm.marginX : 0);
+  set('setWmMarginY', wm.marginY != null ? wm.marginY : 0);
+  currentWmLogo = wm.logo || '';
+  updateWmLogoPreview();
+  renderWmTexts(Array.isArray(wm.texts) ? wm.texts : []);
   set('setAddress', cfg.address);
   set('setPhone', cfg.phone);
   set('setVatNo', cfg.vatNo);
@@ -672,6 +731,7 @@ function fillSettingsForm(cfg){
   currentLoginBg = lsc.bgImage || '';
   updateLoginBgPreview();
   if(window.AdminUI){ window.AdminUI.fill(cfg); }
+  if(window.AdminAccounts){ window.AdminAccounts.fill(); }
   if(window.AdminExtra){ window.AdminExtra.fill(cfg); window.AdminExtra.autoRun(cfg); }
 }
 
@@ -684,6 +744,26 @@ document.getElementById('settingsForm').onsubmit = async function(e){
     headerTagline: document.getElementById('setHeaderTagline').value.trim(),
     devName: document.getElementById('setDevName').value.trim(),
     logo: currentLogo || '',
+    // ===== خلفية الكاشير (شعار خفيف + نص خلف الأصناف) =====
+    watermark: {
+      enabled: !!(document.getElementById('setWmEnabled')||{}).checked,
+      logo: currentWmLogo || '',
+      opacity: Math.min(60, Math.max(2, parseInt((document.getElementById('setWmOpacity')||{}).value, 10) || 12)),
+      size: Math.min(400, Math.max(40, parseInt((document.getElementById('setWmSize')||{}).value, 10) || 140)),
+      // موضع الشعار وهوامشه (يمين/يسار/وسط + هامش من الحافة)
+      alignX: (function(){
+        const v = ((document.getElementById('setWmAlignX')||{}).value || 'center');
+        return (['left','right','center'].indexOf(v) !== -1) ? v : 'center';
+      })(),
+      alignY: (function(){
+        const v = ((document.getElementById('setWmAlignY')||{}).value || 'center');
+        return (['top','bottom','center'].indexOf(v) !== -1) ? v : 'center';
+      })(),
+      marginX: Math.min(400, Math.max(0, parseInt((document.getElementById('setWmMarginX')||{}).value, 10) || 0)),
+      marginY: Math.min(400, Math.max(0, parseInt((document.getElementById('setWmMarginY')||{}).value, 10) || 0)),
+      text: ((document.getElementById('setWmText')||{}).value || '').trim(),
+      texts: collectWmTexts()
+    },
     address: document.getElementById('setAddress').value.trim(),
     phone:   document.getElementById('setPhone').value.trim(),
     vatNo:   document.getElementById('setVatNo').value.trim(),
@@ -694,6 +774,7 @@ document.getElementById('settingsForm').onsubmit = async function(e){
     allowDeposit: document.getElementById('setAllowDeposit').checked,
     directPrint: document.getElementById('setDirectPrint').checked,
     qtyEdit: document.getElementById('setQtyEdit').checked,
+    priceEdit: document.getElementById('setPriceEdit').checked,
     notifEnabled: document.getElementById('setNotifEnabled').checked,
     notifSound: document.getElementById('setNotifSound').checked,
     showVat: document.getElementById('setShowVat').checked,
@@ -923,6 +1004,75 @@ function updateLoginBgPreview(){
   }
   const rm = document.getElementById('removeLoginBgBtn');
   if(rm){ rm.onclick = function(){ currentLoginBg = ''; const fi = document.getElementById('setLoginBgFile'); if(fi) fi.value=''; updateLoginBgPreview(); }; }
+})();
+
+// ===== خلفية الكاشير (شعار خفيف + نص) =====
+let currentWmLogo = '';   // dataURL لشعار الخلفية (فارغ = شعار الفاتورة)
+
+function updateWmLogoPreview(){
+  const img = document.getElementById('wmLogoPreview');
+  const rm = document.getElementById('removeWmLogoBtn');
+  if(!img) return;
+  if(currentWmLogo){
+    img.src = currentWmLogo; img.style.display = '';
+    if(rm) rm.style.display = '';
+  } else {
+    img.src = ''; img.style.display = 'none';
+    if(rm) rm.style.display = 'none';
+  }
+}
+
+// ===== نصوص إضافية أسفل شعار الخلفية =====
+function addWmTextRow(text){
+  const list = document.getElementById('wmTextsList');
+  if(!list) return;
+  const row = document.createElement('div');
+  row.className = 'cf-row wm-text-row';
+  const ti = document.createElement('input');
+  ti.type = 'text'; ti.className = 'wt-label'; ti.maxLength = 60;
+  ti.placeholder = 'نص إضافي (مثل: أصنافنا طازجة يومياً)'; ti.value = text || '';
+  const del = document.createElement('button');
+  del.type = 'button'; del.className = 'cf-del'; del.textContent = '✕';
+  del.onclick = () => row.remove();
+  row.appendChild(ti); row.appendChild(del);
+  list.appendChild(row);
+}
+
+function renderWmTexts(texts){
+  const list = document.getElementById('wmTextsList');
+  if(!list) return;
+  list.innerHTML = '';
+  (texts || []).forEach(t => addWmTextRow(t));
+}
+
+function collectWmTexts(){
+  const out = [];
+  document.querySelectorAll('#wmTextsList .wm-text-row').forEach(row => {
+    const v = (row.querySelector('.wt-label').value || '').trim();
+    if(v) out.push(v);
+  });
+  return out.slice(0, 10);
+}
+
+(function(){
+  const fileInput = document.getElementById('setWmLogoFile');
+  if(fileInput){
+    fileInput.onchange = function(){
+      const f = fileInput.files && fileInput.files[0];
+      if(!f) return;
+      if(!/^image\//.test(f.type)){ showToast('الرجاء اختيار ملف صورة'); return; }
+      resizeImageToDataUrl(f, 320, function(dataUrl){
+        if(!dataUrl){ showToast('تعذر قراءة الصورة'); return; }
+        currentWmLogo = dataUrl;
+        updateWmLogoPreview();
+        showToast('تم تحميل شعار الخلفية — اضغط حفظ الإعدادات');
+      });
+    };
+  }
+  const rm = document.getElementById('removeWmLogoBtn');
+  if(rm){ rm.onclick = function(){ currentWmLogo = ''; const fi = document.getElementById('setWmLogoFile'); if(fi) fi.value=''; updateWmLogoPreview(); }; }
+  const addBtn = document.getElementById('addWmTextBtn');
+  if(addBtn){ addBtn.onclick = () => addWmTextRow(''); }
 })();
 
 // ===== خانات إضافية في الفاتورة =====
@@ -1258,10 +1408,12 @@ function openSignupReview(id){
       '<dt>الاسم الكامل</dt><dd>' + esc(r.fullName || ((r.first||'')+' '+(r.second||''))) + '</dd>' +
       '<dt>رقم الجوال</dt><dd dir="ltr" style="text-align:right">' + esc(r.phone || '—') + '</dd>' +
       '<dt>المدينة</dt><dd>' + esc(r.city || '—') + '</dd>' +
-      '<dt>اسم الدخول</dt><dd>' + esc(r.username) + '</dd>' +
-      '<dt>كلمة المرور</dt><dd dir="ltr" style="text-align:right">' + esc(r.password || '—') + '</dd>' +
+      '<dt>اسم الدخول</dt><dd><input type="text" id="srUsername" dir="ltr" maxlength="30" autocomplete="off" value="' + esc(r.username || '') + '" style="text-align:right;width:100%" /></dd>' +
+      '<dt>كلمة المرور</dt><dd><input type="text" id="srPassword" dir="ltr" maxlength="40" autocomplete="off" value="' + esc(r.password || '') + '" style="text-align:right;width:100%" /></dd>' +
       '<dt>الحالة</dt><dd><span class="status-pill ' + esc(r.status||'pending') + '">' + statusLabel(r.status) + '</span></dd>' +
     '</dl>' +
+    (r.status === 'activated' ? '<div style="background:#fef9c3;border:1px solid #fde68a;color:#854d0e;border-radius:10px;padding:9px 12px;font-size:12.5px;font-weight:700;margin-bottom:12px">⚠️ هذا الطلب مُفعّل مسبقاً — تعديل اسم الدخول/كلمة المرور هنا لا يغيّر حساب المستخدم المنشأ. غيّره من تبويب «👥 المستخدمون».</div>' : '') +
+    '<small class="settings-hint" style="display:block;margin:-4px 0 12px">يمكنك تعديل اسم الدخول وكلمة المرور قبل التفعيل؛ ستُستخدم القيم الجديدة عند إنشاء حساب المستخدم.</small>' +
     deviceInfoHtml(r.device) +
     '<div class="sr-code">' +
       '<span class="lbl">🔑 كود التفعيل (6 أرقام):</span>' +
@@ -1280,6 +1432,7 @@ function openSignupReview(id){
     '<div class="perm-grid">' + permHtml + '</div>' +
     '<div class="sr-actions">' +
       '<button type="button" class="btn-sm primary" id="srApprove">✅ الموافقة وإعطاء الكود</button>' +
+      '<button type="button" class="btn-sm" id="srSaveCreds">💾 حفظ اسم المستخدم وكلمة المرور</button>' +
       '<button type="button" class="btn-sm" id="srApproveSave">💾 حفظ الصلاحيات</button>' +
       '<button type="button" class="btn-sm danger" id="srReject">❌ رفض</button>' +
     '</div>';
@@ -1303,15 +1456,24 @@ function openSignupReview(id){
     document.querySelector('#signupReviewBody .sr-code .code').textContent = nc;
     showToast('تم توليد كود جديد ✓ (صالح 24 ساعة)');
   };
+  document.getElementById('srSaveCreds').onclick = async () => {
+    await saveSignupCreds(r, false);
+  };
   document.getElementById('srApproveSave').onclick = async () => {
+    if(!(await saveSignupCreds(r, true))) return;
     const { role, perms } = collectSignupPerms();
     await DB.updateSignupRequest(r.id, { role, perms, status: r.status === 'pending' ? 'approved' : r.status });
-    showToast('تم حفظ الصلاحيات ✓');
+    if(signupCache) signupCache = (await DB.getSignupRequests()) || signupCache;
+    renderSignupTable();
+    showToast('تم حفظ البيانات والصلاحيات ✓');
     document.getElementById('signupReviewModal').classList.remove('show');
   };
   document.getElementById('srApprove').onclick = async () => {
+    if(!(await saveSignupCreds(r, true))) return;
     const { role, perms } = collectSignupPerms();
     await DB.updateSignupRequest(r.id, { role, perms, status:'approved', approvedAt: Date.now(), codeIssuedAt: Date.now() });
+    if(signupCache) signupCache = (await DB.getSignupRequests()) || signupCache;
+    renderSignupTable();
     showToast('✅ تمت الموافقة — أعطِ المستخدم الكود: ' + r.code + ' (صالح 24 ساعة)');
     document.getElementById('signupReviewModal').classList.remove('show');
   };
@@ -1333,6 +1495,36 @@ function collectSignupPerms(){
     document.querySelectorAll('#signupReviewBody [data-perm]').forEach(cb => { perms[cb.dataset.perm] = !!cb.checked; });
   }
   return { role: regenRole, perms };
+}
+
+// قراءة والتحقق من اسم الدخول/كلمة المرور المعدّلين في نافذة مراجعة طلب الحساب
+function collectSignupCreds(r){
+  const un = ((document.getElementById('srUsername')||{}).value || '').trim();
+  const pw = ((document.getElementById('srPassword')||{}).value || '').trim();
+  if(!un || un.length < 3){ showToast('اسم الدخول يجب أن يكون 3 أحرف على الأقل'); return null; }
+  if(/\s/.test(un)){ showToast('اسم الدخول لا يحتوي مسافات'); return null; }
+  if(!pw || pw.length < 4){ showToast('كلمة المرور يجب أن تكون 4 أحرف على الأقل'); return null; }
+  const lc = un.toLowerCase();
+  const dupU = (usersCache||[]).find(x => String(x.username||'').trim().toLowerCase() === lc);
+  if(dupU && !(r && String(dupU.username) === String(r.username))){ showToast('اسم الدخول مستخدم بالفعل في المستخدمين'); return null; }
+  const dupR = (signupCache||[]).find(x => x.id !== r.id && String(x.username||'').trim().toLowerCase() === lc);
+  if(dupR){ showToast('اسم الدخول مستخدم في طلب آخر'); return null; }
+  return { username: un, password: pw };
+}
+
+// حفظ اسم الدخول/كلمة المرور للطلب (silent = بلا رسائل نجاح عند الحفظ التلقائي)
+async function saveSignupCreds(r, silent){
+  const c = collectSignupCreds(r);
+  if(!c) return false;
+  if(c.username === r.username && c.password === r.password){ if(!silent) showToast('لا يوجد تغيير'); return true; }
+  try{
+    await DB.updateSignupRequest(r.id, { username: c.username, password: c.password });
+    r.username = c.username; r.password = c.password;
+    const cached = (signupCache||[]).find(x => x.id === r.id);
+    if(cached){ cached.username = c.username; cached.password = c.password; }
+    if(!silent){ renderSignupTable(); showToast('تم حفظ اسم الدخول وكلمة المرور ✓'); }
+    return true;
+  }catch(e){ console.error(e); if(!silent) showToast('تعذر الحفظ'); return false; }
 }
 
 async function removeSignupRequest(id){
@@ -1488,6 +1680,86 @@ async function removeUser(id){
     showToast('تم حذف المستخدم');
   }catch(err){ console.error(err); showToast('تعذر الحذف'); }
 }
+
+// ===== إدارة الحسابات: إعدادات لوحة التحكم + تغيير كلمة المرور =====
+window.AdminAccounts = (function(){
+  function $(id){ return document.getElementById(id); }
+
+  function fillInfo(){
+    var box = $('accInfo'); if(!box) return;
+    if(!currentUser){ box.innerHTML = ''; return; }
+    var rows = [
+      {k:'الاسم', v: currentUser.name || '—', ltr:false},
+      {k:'اسم الدخول', v: currentUser.username || '—', ltr:true},
+      {k:'الدور', v: currentUser.role || '—', ltr:false}
+    ];
+    box.innerHTML = rows.map(function(r){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:9px 12px">' +
+        '<span style="font-size:13px;color:#64748b;font-weight:700">' + esc(r.k) + '</span>' +
+        '<b style="font-size:13.5px;color:var(--ink)"' + (r.ltr ? ' dir="ltr"' : '') + '>' + esc(r.v) + '</b>' +
+      '</div>';
+    }).join('');
+  }
+
+  function fillPrefs(){
+    var cfg = settingsCache || {};
+    var d = $('accDark'); if(d) d.checked = !!cfg.adminDark;
+    var h = $('accHideMoney'); if(h) h.checked = !!cfg.hideMoney;
+  }
+
+  function fill(){ fillInfo(); fillPrefs(); }
+
+  function bindSettingsSave(){
+    var btn = $('accSettingsSave'); if(!btn) return;
+    btn.onclick = async function(){
+      btn.disabled = true;
+      try{
+        var cfg = Object.assign({}, settingsCache || {}, {
+          adminDark: !!($('accDark')||{}).checked,
+          hideMoney: !!($('accHideMoney')||{}).checked
+        });
+        settingsCache = await DB.saveSettings(cfg);
+        if(window.AdminUI && window.AdminUI.fill) window.AdminUI.fill(cfg);
+        showToast('تم حفظ إعدادات لوحة التحكم ✓');
+      }catch(e){ console.error(e); showToast('تعذر حفظ الإعدادات'); }
+      btn.disabled = false;
+    };
+  }
+
+  function bindPasswordForm(){
+    var form = $('accPassForm'); if(!form) return;
+    form.onsubmit = async function(e){
+      e.preventDefault();
+      if(!currentUser){ showToast('لا يوجد مستخدم مسجّل'); return; }
+      var cur = ($('accPassCurrent')||{}).value || '';
+      var np  = ($('accPassNew')||{}).value || '';
+      var cp  = ($('accPassConfirm')||{}).value || '';
+      if(String(currentUser.password) !== String(cur)){ showToast('كلمة المرور الحالية غير صحيحة'); return; }
+      if(np.length < 4){ showToast('كلمة المرور الجديدة قصيرة (4 أحرف على الأقل)'); return; }
+      if(np !== cp){ showToast('تأكيد كلمة المرور غير مطابق'); return; }
+      if(np === cur){ showToast('كلمة المرور الجديدة مطابقة للحالية'); return; }
+      var u = usersCache.find(function(x){ return String(x.id) === String(currentUser.id); });
+      if(!u){ showToast('المستخدم غير موجود'); return; }
+      u.password = np;
+      currentUser = u;
+      try{
+        await DB.saveUsers(usersCache);
+        form.reset();
+        showToast('تم تغيير كلمة المرور ✓');
+      }catch(err){ console.error(err); showToast('تعذر حفظ كلمة المرور'); }
+    };
+  }
+
+  function init(){
+    bindSettingsSave();
+    bindPasswordForm();
+    fill();
+  }
+  if(document.readyState !== 'loading') init();
+  else document.addEventListener('DOMContentLoaded', init);
+
+  return { fill: fill };
+})();
 
 // ===== Customers & remaining balances =====
 function orderRemaining(o){ return Math.max(0, Number(o.remaining) || 0); }
@@ -1857,7 +2129,7 @@ window.AdminUI = (function(){
 (function(){
   if(!window.BMSPrinter) return;
   var ids = {
-    align:'pAlign', marginTop:'pMarginTop', marginBottom:'pMarginBottom',
+    align:'pAlign', paperSize:'pPaperSize', marginTop:'pMarginTop', marginBottom:'pMarginBottom',
     marginSide:'pMarginSide', fontSize:'pFontSize', fontFamily:'pFontFamily',
     thankYouText:'pThankText', signatureText:'pSignText',
     defaultPrinter:'pDefaultPrinter', copies:'pCopies', feedLines:'pFeedLines',

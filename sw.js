@@ -3,7 +3,7 @@
 // الاستراتيجية: network-first للطلبات المحلية (تفضيل أحدث نسخة عند الاتصال،
 // والرجوع إلى النسخة المخزّنة عند انقطاع الشبكة).
 
-var CACHE = 'sweets-pwa-v2';
+var CACHE = 'sweets-pwa-v18';
 var APP_SHELL = [
   './',
   './index.html',
@@ -13,7 +13,12 @@ var APP_SHELL = [
   './manifest.json',
   './logo.png',
   './icon-192.png',
-  './splash-bg.jpg'
+  './splash-bg.jpg',
+  './backup.js',
+  './scan.html',
+  './jsqr.js',
+  './lib/sqljs/sql-wasm.js',
+  './lib/sqljs/sql-wasm.wasm'
 ];
 
 self.addEventListener('install', function(e){

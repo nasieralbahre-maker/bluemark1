@@ -119,10 +119,22 @@ function logActivity(event, action){
       action: action || '',
       net: ni.net,
       online: ni.online,
+      did: deviceId(),
       ts: Date.now()
     };
     if(window.DB && typeof DB.addActivity==='function') DB.addActivity(entry);
   }catch(e){}
+}
+// ===== معرّف الجهاز (لتمييز «دخولي أنا» عن دخول غيري في إشعار المدير) =====
+function deviceId(){
+  try{
+    var d = localStorage.getItem('pos_device_id');
+    if(!d){
+      d = 'D' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+      localStorage.setItem('pos_device_id', d);
+    }
+    return d;
+  }catch(e){ return 'D-UNKNOWN'; }
 }
 try{ window.logActivity = logActivity; }catch(e){}
 
@@ -138,6 +150,7 @@ let exchangeName = '';     // اسم الصراف المختار
 let exchangeColor = '';    // لون خلفية الصراف المختار
 let orderTheme = false;     // مع ثيم / بدون ثيم
 let themeData = {occasion:'', customText:''}; // بيانات الثيم: المناسبة + النص الحر
+let editingOrder = null;    // الطلب المحفوظ قيد التعديل (null = ليس في وضع التعديل)
 
 // ===== Helpers =====
 function esc(str){
@@ -229,7 +242,7 @@ function addToTicket(id){
   else {
     const item = MENU.find(m => m.id === id);
     if(!item) return;
-    ticket.push({id:item.id, name:item.name, price:item.price, emoji:item.emoji, qty:1, wrapped:!!item.wrapped});
+    ticket.push({id:item.id, name:item.name, price:item.price, origPrice:item.price, emoji:item.emoji, qty:1, wrapped:!!item.wrapped});
   }
   renderTicket();
 }
@@ -250,8 +263,31 @@ function setQty(id, val){
   if(t.qty <= 0) ticket = ticket.filter(x => x.id !== id);
   renderTicket();
 }
+// ===== جديد: تعديل إجمالي سعر الصنف مباشرة (بجانب مربع الكمية) =====
+// الرقم المكتوب = إجمالي سعر السطر (لكل الكمية) ⇒ سعر الوحدة = الإجمالي ÷ الكمية
+function setPrice(id, val){
+  const t = ticket.find(x => x.id === id);
+  if(!t) return;
+  let n = parseFloat(String(val).replace(/[^\d.\-]/g, ''));
+  if(isNaN(n) || n < 0) n = 0;
+  n = Math.round(n * 100) / 100;          // منزلتان عشريتان
+  const q = Math.max(1, Number(t.qty) || 1);
+  // سعر الوحدة = الإجمالي ÷ الكمية (تقريب دقيق حتى يبقى الإجمالي كما هو)
+  t.price = Math.round((n / q) * 1e6) / 1e6;
+  // تحديث خفيف للصف (بدون إعادة بناء القائمة) حتى لا يضيع نقر الأزرار المجاورة
+  const inp = document.querySelector('#ticketItems [data-pr="'+id+'"]');
+  if(inp){
+    const row = inp.closest('.t-item');
+    if(row){
+      const unit = row.querySelector('.ti-unit');
+      if(unit) unit.textContent = money(t.price) + ' للوحدة';
+      inp.classList.toggle('edited', (t.origPrice != null && Math.abs(t.price - t.origPrice) > 0.001));
+    }
+  }
+  updateTotalsUI();
+}
 function removeLine(id){ ticket = ticket.filter(x => x.id !== id); renderTicket(); }
-function clearTicket(){ ticket = []; orderTheme = false; themeData = {occasion:'', customText:''}; document.getElementById('custName').value=''; document.getElementById('custPhone').value=''; document.getElementById('paidAmount').value=''; document.getElementById('pickupDate').value=''; document.getElementById('pickupTime').value=''; resetPayMethod(); renderTicket(); }
+function clearTicket(){ ticket = []; orderTheme = false; themeData = {occasion:'', customText:''}; resetEditUI(); document.getElementById('custName').value=''; document.getElementById('custPhone').value=''; document.getElementById('paidAmount').value=''; document.getElementById('pickupDate').value=''; document.getElementById('pickupTime').value=''; resetPayMethod(); renderTicket(); }
 // إعادة ضبط طريقة الدفع إلى نقد (بعد كل طلب)
 function resetPayMethod(){
   payMethod = 'cash'; exchangeName = ''; exchangeColor = ''; depositType = 'إيداع';
@@ -275,6 +311,22 @@ function calcTotals(){
   return {subtotal, vat, total};
 }
 
+// تحديث شريط المجاميع فقط (بدون إعادة بناء قائمة الأصناف)
+function updateTotalsUI(){
+  const {subtotal, vat, total} = calcTotals();
+  document.getElementById('subTotal').textContent = money(subtotal);
+  document.getElementById('vatVal').textContent = money(vat);
+  document.getElementById('grandTotal').textContent = money(total);
+  // إخفاء صفوف الضريبة والمجموع الفرعي عند تعطيل الضريبة
+  const _showVat = (RESTAURANT.showVat !== false);
+  const _vatRow = document.getElementById('vatRow');
+  const _subRow = document.getElementById('subRow');
+  if(_vatRow) _vatRow.style.display = _showVat ? '' : 'none';
+  if(_subRow) _subRow.style.display = _showVat ? '' : 'none';
+  updateChange();
+  updateThemeRow();
+}
+
 function renderTicket(){
   const wrap = document.getElementById('ticketItems');
   wrap.innerHTML = '';
@@ -284,21 +336,32 @@ function renderTicket(){
     wrap.innerHTML = '<p class="ticket-empty">اضغط على الأصناف لإضافتها 👆</p>';
   } else {
     const QTY_EDIT = (RESTAURANT.qtyEdit !== false);  // تعديل الكمية بالضغط المباشر على الرقم
-    ticket.forEach(t => {
+    const PRICE_EDIT = (RESTAURANT.priceEdit !== false); // تعديل السعر مباشرة بجانب مربع الكمية
+    ticket.forEach((t, idx) => {
       const row = document.createElement('div');
       row.className = 't-item';
       const qtyCell = QTY_EDIT
         ? '<input class="qty-input" type="number" min="0" step="1" inputmode="numeric" data-q="'+t.id+'" value="'+t.qty+'" aria-label="الكمية" />'
         : '<span>'+t.qty+'</span>';
+      // ===== جديد: صندوق السعر الإجمالي القابل للتحرير بجانب الكمية =====
+      // الرقم المكتوب = إجمالي سعر الصنف (لكل الكمية) وليس سعر الوحدة
+      const qtyNow = Math.max(1, Number(t.qty) || 1);
+      const lineTotal = Math.round((Number(t.price) || 0) * qtyNow * 100) / 100;
+      const priceEdited = (t.origPrice != null && Math.abs(Number(t.price) - Number(t.origPrice)) > 0.001);
+      const priceInput = PRICE_EDIT
+        ? '<input class="price-input' + (priceEdited ? ' edited' : '') + '" type="number" min="0" step="0.5" inputmode="decimal" data-pr="'+t.id+'" value="'+lineTotal+'" aria-label="إجمالي سعر الصنف" title="إجمالي سعر الصنف (لكل الكمية) — قابل للتعديل" />'
+        : '<span class="ti-price-static">' + money(lineTotal) + '</span>';
+      // خلية السعر: صندوق الإجمالي + تسمية صغيرة
+      const priceCell = '<div class="ti-price">' + priceInput + '<span class="ti-label">الإجمالي</span></div>';
       row.innerHTML =
-        '<span class="ti-emoji">' + (t.emoji||'🍽️') + '</span>' +
-        '<div class="ti-info"><h4>' + esc(t.name) + '</h4><span>' + money(t.price) + '</span></div>' +
+        '<span class="ti-emoji">' + (t.emoji||'🍽️') + '<i class="ti-no">' + (idx+1) + '</i></span>' +
+        '<div class="ti-info"><h4>' + esc(t.name) + '</h4><span class="ti-unit">' + money(t.price) + ' للوحدة</span></div>' +
         '<div class="qty">' +
           '<button data-m="'+t.id+'">−</button>' +
           qtyCell +
           '<button data-p="'+t.id+'">+</button>' +
         '</div>' +
-        '<span class="ti-line">' + money(t.price*t.qty) + '</span>' +
+        priceCell +
         '<button class="t-del" data-d="'+t.id+'">🗑️</button>';
       row.querySelector('[data-m]').onclick = () => changeQty(t.id, -1);
       row.querySelector('[data-p]').onclick = () => changeQty(t.id, 1);
@@ -312,21 +375,19 @@ function renderTicket(){
           qi.onkeydown = (e) => { if(e.key === 'Enter'){ e.preventDefault(); qi.blur(); } };
         }
       }
+      if(PRICE_EDIT){
+        const pi = row.querySelector('[data-pr]');
+        if(pi){
+          pi.onclick = (e) => { e.stopPropagation(); pi.select(); };
+          pi.onfocus = () => pi.select();
+          pi.onchange = () => setPrice(t.id, pi.value);
+          pi.onkeydown = (e) => { if(e.key === 'Enter'){ e.preventDefault(); pi.blur(); } };
+        }
+      }
       wrap.appendChild(row);
     });
   }
-  const {subtotal, vat, total} = calcTotals();
-  document.getElementById('subTotal').textContent = money(subtotal);
-  document.getElementById('vatVal').textContent = money(vat);
-  document.getElementById('grandTotal').textContent = money(total);
-  // إخفاء صفوف الضريبة والمجموع الفرعي عند تعطيل الضريبة
-  const _showVat = (RESTAURANT.showVat !== false);
-  const _vatRow = document.getElementById('vatRow');
-  const _subRow = document.getElementById('subRow');
-  if(_vatRow) _vatRow.style.display = _showVat ? '' : 'none';
-  if(_subRow) _subRow.style.display = _showVat ? '' : 'none';
-  updateChange();
-  updateThemeRow();
+  updateTotalsUI();
 }
 
 // إظهار خيار الثيم فقط عند وجود أصناف مغلّفة في الطلب
@@ -542,9 +603,18 @@ function updateRemain(){
 
 // ===== Clear / new order =====
 document.getElementById('clearTicket').onclick = () => {
+  if(editingOrder){ cancelEditOrder(); return; }
   if(ticket.length && !confirm('بدء طلب جديد ومسح الحالي؟')) return;
   clearTicket();
 };
+
+// ===== أزرار شريط وضع التعديل (لوحة الفاتورة الجانبية) =====
+(function(){
+  var sv = document.getElementById('editSaveBtn');
+  if(sv) sv.onclick = function(){ saveEditedOrder(); };
+  var cn = document.getElementById('editCancelBtn');
+  if(cn) cn.onclick = function(){ cancelEditOrder(); };
+})();
 
 // زر إرسال الفاتورة عبر واتساب (يرسل آخر فاتورة أُنشئت)
 (function(){
@@ -552,8 +622,72 @@ document.getElementById('clearTicket').onclick = () => {
   if(waBtn) waBtn.onclick = () => sendInvoiceWhatsApp(lastOrder);
 })();
 
+// ===== خلفية الكاشير (شعار خفيف + نص خلف الأصناف) =====
+// تُضبط من لوحة التحكم: الإعدادات ← «خلفية الكاشير (الشعار والنص)»
+function applyWatermark(cfg){
+  const wrap = document.getElementById('posWatermark');
+  if(!wrap) return;
+  const wm = (cfg && cfg.watermark) || {};
+  const enabled = (wm.enabled !== false);
+  if(!enabled){ wrap.classList.remove('show'); return; }
+  const op  = Math.min(60, Math.max(2, Number(wm.opacity) || 12)) / 100;   // درجة إظهار الشعار
+  const size = Math.min(400, Math.max(40, Number(wm.size) || 140));         // حجم الشعار (px)
+  // ===== موضع الشعار وهوامشه (يمين / يسار / وسط + هامش من الحافة) =====
+  const ax = (['left','right','center'].indexOf(String(wm.alignX || '')) !== -1) ? String(wm.alignX) : 'center';
+  const ay = (['top','bottom','center'].indexOf(String(wm.alignY || '')) !== -1) ? String(wm.alignY) : 'center';
+  const mx = Math.min(400, Math.max(0, Number(wm.marginX) || 0));           // هامش أفقي (px)
+  const my = Math.min(400, Math.max(0, Number(wm.marginY) || 0));           // هامش عمودي (px)
+  // ملاحظة: نستخدم مواضع فيزيائية (left/right/top/bottom) لأن الصفحة RTL
+  // ملاحظة2: المواضع الفيزيائية تُطبَّق على الحاوية الداخلية (wmInner) وليس الحاوية نفسها
+  const inner = document.getElementById('wmInner');
+  if(inner){
+    const base = 20;                       // هامش أساسي صغير عن الحواف
+    let tx = '0', ty = '0';
+    // أفقياً
+    inner.style.left = ''; inner.style.right = '';
+    if(ax === 'left'){ inner.style.left = (base + mx) + 'px'; }
+    else if(ax === 'right'){ inner.style.right = (base + mx) + 'px'; }
+    else { inner.style.left = '50%'; tx = '-50%'; }
+    // عمودياً
+    inner.style.top = ''; inner.style.bottom = '';
+    if(ay === 'top'){ inner.style.top = (base + my) + 'px'; }
+    else if(ay === 'bottom'){ inner.style.bottom = (base + my) + 'px'; }
+    else { inner.style.top = '50%'; ty = '-50%'; }
+    inner.style.transform = 'translate(' + tx + ',' + ty + ')';
+  }
+  // الشعار: شعار الخلفية المخصص ← شعار الفاتورة ← logo.png
+  const src = (wm.logo || (typeof RESTAURANT !== 'undefined' && RESTAURANT.logo) || 'logo.png');
+  const logoEl = document.getElementById('wmLogo');
+  if(logoEl){
+    if(logoEl.getAttribute('src') !== src) logoEl.setAttribute('src', src);
+    logoEl.style.width = size + 'px';
+    logoEl.style.maxWidth = '100%';
+    logoEl.style.opacity = String(op);
+  }
+  // النص بجانب الشعار (يسار الشعار) — أوضح قليلاً من الشعار
+  const textEl = document.getElementById('wmText');
+  if(textEl){
+    const t = (wm.text != null ? String(wm.text) : '').trim();
+    textEl.textContent = t;
+    textEl.style.display = t ? '' : 'none';
+    textEl.style.opacity = String(Math.min(0.6, op * 2.6));
+    textEl.style.fontSize = Math.max(14, Math.round(size / 6)) + 'px';
+  }
+  // النصوص الإضافية
+  const textsEl = document.getElementById('wmTexts');
+  if(textsEl){
+    const list = (Array.isArray(wm.texts) ? wm.texts : []).map(x => String(x == null ? '' : x).trim()).filter(Boolean);
+    textsEl.innerHTML = list.map(x => '<div>' + esc(x) + '</div>').join('');
+    textsEl.style.opacity = String(Math.min(0.6, op * 2.2));
+    textsEl.style.fontSize = Math.max(12, Math.round(size / 8)) + 'px';
+  }
+  wrap.classList.add('show');
+}
+
 // ===== Pay & print =====
 document.getElementById('payPrintBtn').onclick = async function(){
+  // في وضع تعديل طلب محفوظ: الزر يحفظ التعديلات على نفس الطلب (لا ينشئ فاتورة جديدة)
+  if(editingOrder){ await saveEditedOrder(); return; }
   if(ticket.length === 0){ showToast('أضف أصنافاً أولاً'); return; }
   const {subtotal, vat, total} = calcTotals();
   const inputVal = parseFloat(document.getElementById('paidAmount').value) || 0;
@@ -804,8 +938,9 @@ function printReceipt(order){
   const showVat = (RESTAURANT.showVat !== false);
   const customFields = Array.isArray(RESTAURANT.customFields) ? RESTAURANT.customFields : [];
   const inv = RESTAURANT.invoice || {};
-  const rows = order.items.map(it =>
-    '<tr><td>' + esc(it.name) + '</td>' +
+  const rows = order.items.map((it, i) =>
+    '<tr><td class="rf-no">' + (i+1) + '</td>' +
+    '<td class="rf-item-name">' + esc(it.name) + '</td>' +
     '<td class="c rf-qty">' + it.qty + '</td>' +
     '<td class="l rf-price">' + money(it.price*it.qty) + '</td></tr>'
   ).join('');
@@ -823,7 +958,7 @@ function printReceipt(order){
   if(_logoSide){
     blocks.header =
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
-        '<img class="r-logo" src="' + esc(RESTAURANT.logo) + '" alt="" style="width:60px;height:60px;margin:0;flex:0 0 auto;border-radius:50%;object-fit:cover;border:2px solid #1e3a8a" />' +
+        '<img class="r-logo" src="' + esc(RESTAURANT.logo) + '" alt="" style="width:60px;height:60px;margin:0;flex:0 0 auto;object-fit:contain" />' +
         '<div style="flex:1;text-align:right">' +
           '<h2 class="rf-name" style="margin:0">' + esc(RESTAURANT.headerBrand || RESTAURANT.name) + '</h2>' +
           ((inv.showTagline !== false) && RESTAURANT.headerTagline ? '<div class="r-tagline rf-estab">' + esc(RESTAURANT.headerTagline) + '</div>' : '') +
@@ -846,7 +981,7 @@ function printReceipt(order){
       '<div class="r-line"></div>';
   }
   blocks.meta =
-    '<div class="r-meta">' +
+    '<div class="r-meta r-meta-grid">' +
       '<div>' + (showVat ? 'فاتورة ضريبية مبسطة' : 'فاتورة') + '</div>' +
       '<div class="rf-invno">رقم الطلب: ' + esc(orderNoLabel(order)) + '</div>' +
       '<div class="rf-date">التاريخ: ' + esc(order.date) + '</div>' +
@@ -863,7 +998,7 @@ function printReceipt(order){
     '</div>' +
     '<div class="r-line"></div>';
   blocks.items =
-    '<table class="rf-items"><thead><tr><th>الصنف</th><th class="c rf-qty">كمية</th><th class="l rf-price">المبلغ</th></tr></thead>' +
+    '<table class="rf-items"><thead><tr><th class="rf-no">#</th><th class="rf-item-name">الصنف</th><th class="c rf-qty">كمية</th><th class="l rf-price">المبلغ</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table>' +
     '<div class="r-line"></div>';
   blocks.totals =
@@ -875,7 +1010,7 @@ function printReceipt(order){
   blocks.payment =
     '<div class="r-tot"><span>طريقة الدفع</span><span>' + payTxt + '</span></div>' +
     ((order.pay === 'cash' || order.pay === 'deposit')
-      ? '<div class="r-tot rf-paid"><span>' + (order.pay === 'deposit' ? 'العربون المدفوع' : 'المدفوع') + '</span><span>' + money(order.paid) + '</span></div>' +
+      ? '<div class="r-tot big rf-paid"><span>' + (order.pay === 'deposit' ? 'العربون المدفوع' : 'المدفوع') + '</span><span>' + money(order.paid) + '</span></div>' +
         (order.change > 0 ? '<div class="r-tot"><span>الباقي</span><span>' + money(order.change) + '</span></div>' : '')
       : '') +
     (hasRemain
@@ -1183,6 +1318,121 @@ async function openQrScanner(){
   const modal = document.getElementById('qrScanModal');
   if(modal) modal.onclick = (e) => { if(e.target === modal) closeQrScanner(); };
 })();
+
+// ===== زر «Scan»: فتح صفحة ماسح الباركود (scan.html) =====
+// نفس الصفحة على الجوال (زر الرجوع متاح) · ونافذة/تبويب جديد على الكمبيوتر.
+(function bindScanButton(){
+  const btn = document.getElementById('scanBtn');
+  if(!btn) return;
+  btn.onclick = function(){
+    const small = (window.matchMedia && window.matchMedia('(max-width:860px)').matches) || (innerWidth < 860);
+    try{
+      if(small){
+        location.href = 'scan.html';
+      }else{
+        const w = window.open('scan.html', '_blank');
+        if(!w) location.href = 'scan.html';
+      }
+    }catch(e){ location.href = 'scan.html'; }
+  };
+})();
+
+// ===== قائمة الهيدر «☰ القائمة»: إظهار بقية أوامر الكاشير في لوحة أنيقة =====
+(function bindHeaderMenu(){
+  const btn = document.getElementById('hdrMenuBtn');
+  const panel = document.getElementById('hdrPanel');
+  const back = document.getElementById('hdrBackdrop');
+  const close = document.getElementById('hdrPanelClose');
+  if(!btn || !panel) return;
+  function show(){
+    panel.classList.add('open');
+    panel.setAttribute('aria-hidden','false');
+    btn.classList.add('open');
+    btn.setAttribute('aria-expanded','true');
+    if(back) back.classList.add('show');
+  }
+  function hide(){
+    panel.classList.remove('open');
+    panel.setAttribute('aria-hidden','true');
+    btn.classList.remove('open');
+    btn.setAttribute('aria-expanded','false');
+    if(back) back.classList.remove('show');
+  }
+  btn.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(panel.classList.contains('open')) hide(); else show();
+  });
+  if(back) back.addEventListener('click', hide);
+  if(close) close.addEventListener('click', hide);
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape') hide(); });
+  // إغلاق القائمة بعد اختيار أي أمر (حتى لا تبقى فوق أي نافذة تُفتح)
+  panel.addEventListener('click', function(e){
+    if(e.target && e.target.closest && e.target.closest('button, a')) setTimeout(hide, 80);
+  });
+  window.closeHeaderMenu = hide;
+})();
+
+// ===== استقبال مسح الباركود من الجوال وإضافته للطلب تلقائياً =====
+// الجوال يفتح صفحة scan.html ويمسح الباركود بكاميرته، فيصل الكود إلى الكمبيوتر فوراً
+// (عبر Firestore — يعمل على نفس الشبكة أو عبر الإنترنت) ويضاف الصنف للطلب الحالي.
+let _scanListenerStarted = false;
+function startRemoteScanListener(){
+  if(_scanListenerStarted) return;
+  if(typeof DB === 'undefined' || typeof DB.onScans !== 'function') return;
+  _scanListenerStarted = true;
+  const startedAt = Date.now();
+  let lastTs = startedAt;
+  try{
+    DB.onScans(function(list){
+      (list || []).forEach(function(s){
+        if(!s || !s.code) return;
+        const ts = Number(s.ts) || 0;
+        if(ts < startedAt){                       // بقايا من جلسة سابقة → تنظيف
+          try{ if(DB.deleteScan) DB.deleteScan(s.id); }catch(e){}
+          return;
+        }
+        if(ts <= lastTs) return;                 // مكرر
+        lastTs = ts;
+        handleRemoteScan(s);
+      });
+    });
+  }catch(e){ console.error(e); _scanListenerStarted = false; }
+}
+function handleRemoteScan(s){
+  const code = String(s.code || '').trim();
+  if(!code) return;
+  // قائمة الأصناف: الذاكرة أولاً ثم النسخة المحفوظة (للتعامل مع الباركود المُضاف حديثاً)
+  let menu = [];
+  try{
+    if(typeof MENU !== 'undefined' && MENU && MENU.length) menu = MENU.slice();
+  }catch(e){}
+  try{
+    const saved = JSON.parse(localStorage.getItem('menu')||'[]');
+    if(Array.isArray(saved) && saved.length){
+      saved.forEach(function(m){ if(!menu.find(function(x){ return x.id === m.id; })) menu.push(m); });
+    }
+  }catch(e){}
+  const item = menu.find(function(m){
+    return String(m.barcode||'').trim() !== '' && String(m.barcode).trim() === code;
+  });
+  if(item){
+    // إضافة الصنف للطلب (نضيفه مباشرة إن لم يكن في قائمة الذاكرة)
+    const inMenu = (typeof MENU !== 'undefined' && MENU) ? MENU.find(function(m){ return m.id === item.id; }) : null;
+    if(inMenu){
+      try{ addToTicket(item.id); }catch(e){}
+    }else{
+      try{
+        ticket.push({id:item.id, name:item.name, price:item.price, origPrice:item.price,
+                     emoji:item.emoji, qty:1, wrapped:!!item.wrapped});
+        renderTicket();
+      }catch(e){}
+    }
+    showToast('📷 تم المسح: ' + (item.emoji||'') + ' ' + item.name);
+  } else {
+    showToast('📷 رمز مسحّ: ' + code + ' — لا يوجد صنف بهذا الباركود');
+  }
+  try{ if(DB.deleteScan) DB.deleteScan(s.id); }catch(e){}
+}
 
 // ===== نافذة سجل الحركة =====
 (function bindActivityLog(){
@@ -1572,7 +1822,7 @@ function showOrderDetails(o){
       ((isManagerUser() && prep && prep !== 'ready') ? '<button class="btn btn-ready" id="odReady">✅ جاهز</button>' : '') +
       '<button class="btn" id="odReprint">🖨️ طباعة</button>' +
       '<button class="btn" id="odWhatsapp">📲 واتساب</button>' +
-      '<button class="btn" id="odReorder">🔁 إعادة الطلب</button>' +
+      '<button class="btn" id="odEdit">✏️ تعديل الطلب</button>' +
       (hasRem ? '<button class="btn btn-primary" id="odSettle">✔ تحصيل المتبقي</button>' : '') +
     '</div>';
   document.getElementById('orderDetailsBody').innerHTML = body;
@@ -1582,41 +1832,118 @@ function showOrderDetails(o){
   if(readyBtn) readyBtn.onclick = () => setOrderPrep(o, 'ready');
   document.getElementById('odReprint').onclick = () => printReceipt(o);
   document.getElementById('odWhatsapp').onclick = () => sendInvoiceWhatsApp(o);
-  document.getElementById('odReorder').onclick = () => reorderFrom(o);
+  const editBtn = document.getElementById('odEdit');
+  if(editBtn) editBtn.onclick = () => editExistingOrder(o);
   const settleBtn = document.getElementById('odSettle');
   if(settleBtn) settleBtn.onclick = () => settleRemainingPOS(o);
   orderDetailsModal.classList.add('show');
 }
 
-// إنشاء فاتورة جديدة بنفس أصناف طلب سابق (reorder)
-function reorderFrom(o){
-  if(!o || !(o.items && o.items.length)){ showToast('لا توجد أصناف لنسخها'); return; }
-  if(ticket.length && !confirm('سيتم مسح الطلب الحالي وتحميل أصناف هذا الطلب — متابعة؟')) return;
+// ===== وضع تعديل الطلب (تعديل طلب محفوظ) =====
+// الطلب قيد التعديل (null = ليس في وضع التعديل)
+// يحفظ واجهة وضع التعديل ويصفّره
+function resetEditUI(){
+  editingOrder = null;
+  const b = document.getElementById('editBanner'); if(b) b.style.display = 'none';
+  const pb = document.getElementById('payPrintBtn');
+  if(pb){ pb.textContent = '🖨️ دفع وطباعة الفاتورة'; pb.classList.remove('edit-mode'); }
+  const th = document.querySelector('.ticket-head h2'); if(th) th.textContent = 'الطلب الحالي';
+}
+// الدخول في وضع تعديل طلب محفوظ: تُحمّل الأصناف في الفاتورة الجانبية كما لو لم تُحفظ بعد
+function editExistingOrder(o){
+  if(!o || !(o.items && o.items.length)){ showToast('لا توجد أصناف لتعديلها'); return; }
+  if(!editingOrder && ticket.length && !confirm('سيتم مسح الفاتورة الحالية وتحميل أصناف الطلب ' + orderNoLabel(o) + ' للتعديل — متابعة؟')) return;
+  if(editingOrder && editingOrder.id !== o.id && ticket.length && !confirm('سيتم استبدال الفاتورة الحالية بطلب ' + orderNoLabel(o) + ' — متابعة؟')) return;
+  editingOrder = o;
   ticket = [];
-  orderTheme = false;
   (o.items || []).forEach((it, idx) => {
     const m = MENU.find(x => x.name === it.name);
     ticket.push({
-      id: m ? m.id : ('re_' + idx + '_' + Date.now()),
-      name: it.name, price: it.price, emoji: it.emoji || (m ? m.emoji : ''),
+      id: m ? m.id : ('ed_' + idx + '_' + Date.now()),
+      name: it.name, price: it.price, origPrice: it.price, emoji: it.emoji || (m ? m.emoji : ''),
       qty: it.qty || 1, wrapped: !!it.wrapped
     });
   });
-  if(o.theme) orderTheme = true;
-  if(o.themeData){
-    themeData = {occasion: o.themeData.occasion || '', customText: o.themeData.customText || ''};
-    document.querySelectorAll('#themeRow .theme-btn').forEach(x => x.classList.toggle('active', x.dataset.theme === (o.theme ? 'yes' : 'no')));
-  } else {
-    themeData = {occasion:'', customText:''};
+  // بيانات العميل والموعد
+  document.getElementById('custName').value = (o.name && o.name !== 'عميل نقدي') ? o.name : '';
+  document.getElementById('custPhone').value = o.phone || '';
+  document.getElementById('pickupDate').value = o.pickupDate || '';
+  document.getElementById('pickupTime').value = o.pickupTime || '';
+  document.getElementById('paidAmount').value = '';
+  // نوع الطلب
+  if(o.type){
+    orderType = o.type;
+    document.querySelectorAll('#typeRow .type-btn').forEach(x => x.classList.toggle('active', x.dataset.type === o.type));
   }
-  if(o.name && o.name !== 'عميل نقدي') document.getElementById('custName').value = o.name;
-  if(o.phone) document.getElementById('custPhone').value = o.phone;
+  // الثيم
+  orderTheme = !!o.theme;
+  themeData = {occasion:(o.themeData && o.themeData.occasion) || '', customText:(o.themeData && o.themeData.customText) || ''};
+  document.querySelectorAll('#themeRow .theme-btn').forEach(x => x.classList.toggle('active', x.dataset.theme === (o.theme ? 'yes' : 'no')));
+  // واجهة وضع التعديل
+  const b = document.getElementById('editBanner');
+  if(b){
+    b.style.display = 'flex';
+    const t = document.getElementById('editBannerTxt');
+    if(t) t.textContent = '✏️ تعديل الطلب ' + orderNoLabel(o) + ' — التعديلات لم تُحفظ بعد';
+  }
+  const pb = document.getElementById('payPrintBtn');
+  if(pb){ pb.textContent = '💾 حفظ تعديل الطلب'; pb.classList.add('edit-mode'); }
+  const th = document.querySelector('.ticket-head h2'); if(th) th.textContent = '✏️ تعديل الطلب ' + orderNoLabel(o);
   renderTicket();
   orderDetailsModal.classList.remove('show');
   if(typeof custModal !== 'undefined' && custModal) custModal.classList.remove('show');
-  if(typeof weekModal !== 'undefined' && weekModal){ weekModal.classList.remove('show'); weekModal.dataset.autoOpened=''; }
-  if(typeof clearWeeklyNewMarks === 'function') clearWeeklyNewMarks();
-  showToast('تم تحميل الأصناف — أكمل الدفع لإنشاء فاتورة جديدة');
+  showToast('✏️ عدّل الأصناف في الفاتورة ثم اضغط «حفظ التعديل»');
+}
+
+// حفظ التعديلات على الطلب الأصلي (تحديث الفاتورة — لا ينشئ طلباً جديداً)
+async function saveEditedOrder(){
+  if(!editingOrder){ return; }
+  if(ticket.length === 0){ showToast('لا يمكن حفظ طلب بدون أصناف'); return; }
+  const o = editingOrder;
+  const {subtotal, vat, total} = calcTotals();
+  const oldPaid = Math.max(0, Number(o.paid) || 0);
+  let remaining = 0, change = 0, payStatus = 'paid';
+  if(oldPaid >= total){
+    change = Math.round((oldPaid - total) * 100) / 100;
+    payStatus = 'paid';
+  } else {
+    remaining = Math.round((total - oldPaid) * 100) / 100;
+    payStatus = 'partial';
+  }
+  const patch = {
+    name: document.getElementById('custName').value.trim() || o.name || 'عميل نقدي',
+    phone: document.getElementById('custPhone').value.trim() || '',
+    type: orderType,
+    items: ticket.map(t => ({name:t.name, price:t.price, qty:t.qty, emoji:t.emoji, wrapped:!!t.wrapped})),
+    subtotal: subtotal, vat: vat, total: total,
+    paid: Math.round(oldPaid * 100) / 100,
+    change: Math.max(0, Math.round(change * 100) / 100),
+    remaining: remaining, payStatus: payStatus,
+    pickupDate: document.getElementById('pickupDate').value || '',
+    pickupTime: document.getElementById('pickupTime').value || '',
+    hasWrapped: ticketHasWrapped(),
+    theme: orderTheme,
+    themeData: orderTheme ? Object.assign({}, themeData) : false,
+    editedAt: Date.now(),
+    editedBy: (typeof currentPosUser !== 'undefined' && currentPosUser) ? (currentPosUser.name || currentPosUser.username) : ''
+  };
+  const label = orderNoLabel(o);
+  try{
+    await DB.updateOrder(o.id, patch);
+    Object.assign(o, patch);
+    try{ logActivity('order', 'تعديل الطلب ' + label + ' · ' + (patch.total) + ' · ' + (patch.items||[]).length + ' صنف'); }catch(e){}
+    clearTicket();               // يصفّر الفاتورة ويخرج من وضع التعديل
+    renderCustList();
+    showToast('✅ تم حفظ تعديل الطلب ' + label + ' — للطباعة افتح تفاصيل الطلب');
+  }catch(err){ console.error(err); showToast('تعذر حفظ التعديل'); }
+}
+
+// إلغاء وضع التعديل بدون حفظ
+function cancelEditOrder(){
+  if(!editingOrder) return;
+  if(!confirm('إلغاء تعديل الطلب ' + orderNoLabel(editingOrder) + ' دون حفظ؟')) return;
+  clearTicket();
+  showToast('تم إلغاء التعديل');
 }
 
 async function settleRemainingPOS(o){
@@ -2029,15 +2356,23 @@ function refreshBioLoginBtn(){
 function updatePosUserBox(){
   const box = document.getElementById('posUserBox');
   const nameEl = document.getElementById('posUserName');
+  const chip = document.getElementById('posUserChip');
   if(!box) return;
   if(currentPosUser){
     box.style.display = '';
     if(nameEl) nameEl.textContent = '👤 ' + (currentPosUser.name || currentPosUser.username) +
       (currentPosUser.role ? ' (' + currentPosUser.role + ')' : '');
+    if(chip) chip.style.display = '';
     refreshBioEnrollBtn();
   } else {
     box.style.display = 'none';
+    if(chip) chip.style.display = 'none';
   }
+  // زر النسخ الاحتياطي: يظهر للمدير فقط
+  try{
+    var _bkBtn = document.getElementById('backupBtn');
+    if(_bkBtn) _bkBtn.style.display = (typeof isManagerUser==='function' && isManagerUser()) ? '' : 'none';
+  }catch(e){}
   // زر سجل الحركة: يظهر للمدير فقط (يُضبط عند كل تغيير مستخدم)
   try{
     var _logBtn = document.getElementById('activityLogBtn');
@@ -2568,20 +2903,16 @@ function showCashier(){
   if(toCashier) toCashier.style.display = 'none';
   if(toDash) toDash.style.display = isMgr ? '' : 'none';
 }
-// بعد الدخول: المدير ← لوحة المعلومات، غيره ← الكاشير
+// بعد الدخول: تفتح دائماً صفحة الكاشير (شبكة الأصناف) — ولوحة المعلومات متاحة للمدير من زر «📊 لوحة»
 function routeAfterLogin(){
   const isMgr = (currentPosUser && currentPosUser.role === 'مدير');
   const dashLink = document.getElementById('dashLink');
   const toCashier = document.getElementById('dashToCashier');
-  if(!isMgr){
-    // مستخدم عادي (كاشير): لا أزرار لوحة معلومات — يرى الوجبات مباشرة
-    if(dashLink) dashLink.style.display = 'none';
-    if(toCashier) toCashier.style.display = 'none';
-    showCashier();
-    return;
-  }
-  // المدير: يفتح على لوحة المعلومات
-  showDashboard();
+  if(dashLink) dashLink.style.display = isMgr ? '' : 'none';
+  if(toCashier) toCashier.style.display = 'none';
+  showCashier();
+  startRemoteScanListener();   // استقبال مسح الباركود من الجوال
+  startLoginNoticeListener();  // إشعار المدير عند دخول أي مستخدم (المدير فقط)
 }
 
 // ربط حقول البحث في القوائم
@@ -2737,7 +3068,7 @@ function updateSysNotifBtn(){
 }
 const MAX_NOTIFS = 50;        // حد أقصى
 
-function addNotification(title, text, icon, orderId, subId){
+function addNotification(title, text, icon, orderId, subId, kind){
   // أثناء وضع الصيانة: لا تُسجَّل ولا تظهر أي رسالة للمستخدمين (المدير مستثنى)
   if(typeof isMaintenanceBlocking==='function' && isMaintenanceBlocking()) return;
   const notif = {
@@ -2747,7 +3078,7 @@ function addNotification(title, text, icon, orderId, subId){
     icon: icon || '🛒',
     orderId: orderId || '',
     subId: subId || '',
-    kind: (title && String(title).indexOf('طلب حساب جديد') !== -1) ? 'signup' : '',
+    kind: kind || ((title && String(title).indexOf('طلب حساب جديد') !== -1) ? 'signup' : ''),
     time: new Date().toLocaleString('ar'),
     ts: Date.now(),
     read: false
@@ -2764,6 +3095,19 @@ function addNotification(title, text, icon, orderId, subId){
       window.AndroidNotify.notify(String(title || 'تنبيه'), String(text || ''), String(notif.id || ''));
     }
   }catch(e){}
+}
+
+// ===== إشعارات الدخول: للمدير فقط =====
+// (تُخزَّن محلياً على الجهاز، لذلك نخفيها عن غير المدير عند العرض والعدّ)
+function isMgrOnlyNotif(n){
+  if(!n) return false;
+  if(n.kind === 'login') return true;
+  return String(n.title||'').indexOf('🔐 دخول') === 0;   // يشمل الإشعارات المنشأة قبل التحديث
+}
+function visibleNotifs(){
+  const mgr = (typeof isManagerUser==='function') ? isManagerUser() : false;
+  if(mgr) return notifications;
+  return notifications.filter(n => !isMgrOnlyNotif(n));
 }
 
 function markAllNotifsRead(){
@@ -2785,6 +3129,8 @@ function clearAllNotifs(){
 function updateNotifBadge(){
   const badge = document.getElementById('notifBadge');
   if(!badge) return;
+  // العدّ يحتسب ما هو مرئي لهذا المستخدم فقط (إشعارات الدخول للمدير وحده)
+  notifUnreadCount = visibleNotifs().filter(x => !x.read).length;
   if(notifUnreadCount > 0){
     badge.textContent = notifUnreadCount > 99 ? '99+' : String(notifUnreadCount);
     badge.style.display = '';
@@ -2796,11 +3142,12 @@ function updateNotifBadge(){
 function renderNotifList(){
   const wrap = document.getElementById('notifList');
   if(!wrap) return;
-  if(notifications.length === 0){
+  const list = visibleNotifs();
+  if(list.length === 0){
     wrap.innerHTML = '<div class="notif-empty">لا توجد إشعارات</div>';
     return;
   }
-  wrap.innerHTML = notifications.map(n =>
+  wrap.innerHTML = list.map(n =>
     '<div class="notif-item' + (n.read ? '' : ' unread') + '" data-nid="' + esc(n.id) + '">' +
       '<span class="notif-icon">' + n.icon + '</span>' +
       '<div class="notif-body">' +
@@ -2832,7 +3179,7 @@ function renderNotifList(){
     el.onclick = () => {
       const n = notifications.find(x => x.id === el.dataset.nid);
       if(n) n.read = true;
-      notifUnreadCount = notifications.filter(x => !x.read).length;
+      notifUnreadCount = visibleNotifs().filter(x => !x.read).length;
       updateNotifBadge();
       renderNotifList();
       saveNotifLocal();
@@ -2869,6 +3216,46 @@ function loadNotifLocal(){
     if(raw) notifications = JSON.parse(raw);
     notifUnreadCount = parseInt(localStorage.getItem('pos_notif_unread') || '0', 10) || 0;
   }catch(e){ notifications = []; notifUnreadCount = 0; }
+}
+
+// ===== إشعار المدير عند دخول أي مستخدم إلى النظام =====
+// نستخدم «سجل النشاط» الموجود أصلاً (settings/activity_log) الذي يُكتب عند كل تسجيل دخول.
+// الاشتراك للمدير فقط (isManagerUser) ⇒ الكاشير لا يرى هذه الإشعارات إطلاقاً.
+// إشعار النظام (Toast/جوال) + الإشعار داخل زر 🔔 مع عدّاد غير المقروء.
+let _loginNoticeStarted = false;
+function startLoginNoticeListener(){
+  if(_loginNoticeStarted) return;
+  if(typeof DB === 'undefined' || typeof DB.onActivityLog !== 'function') return;
+  if(typeof isManagerUser === 'function' && !isManagerUser()) return;   // المدير فقط
+  _loginNoticeStarted = true;
+  const startedAt = Date.now() - 2000;        // تسامح ٢ ثانية لسباق الترتيب
+  const seen = new Set();
+  const myDevice = deviceId();
+  try{
+    DB.onActivityLog(function(list){
+      (list || []).forEach(function(en){
+        if(!en || en.event !== 'login' || !en.ts) return;
+        const ts = Number(en.ts) || 0;
+        if(ts < startedAt) return;                        // قديم (قبل فتح هذه الجلسة)
+        const key = String(en.ts) + '|' + (en.username || '');
+        if(seen.has(key)) return;                         // مكرر
+        seen.add(key);
+        if(en.did && en.did === myDevice) return;         // تسجيل الدخول من هذا الجهاز نفسه (دخولي أنا)
+        showLoginNotice(en);
+      });
+    });
+  }catch(e){ console.error(e); _loginNoticeStarted = false; }
+}
+function showLoginNotice(en){
+  const who = en.user || en.username || 'مستخدم';
+  const role = en.role ? ' — ' + en.role : '';
+  let when = '';
+  try{ when = new Date(Number(en.ts) || Date.now()).toLocaleTimeString('ar', {hour:'2-digit', minute:'2-digit'}); }catch(e){}
+  const title = '🔐 دخول: ' + who + role;
+  const text = 'سجّل الدخول إلى النظام' + (when ? ' الساعة ' + when : '');
+  try{ addNotification(title, text, '🔐', '', '', 'login'); }catch(e){}
+  try{ systemNotify(title, text); }catch(e){}
+  try{ showToast(title); }catch(e){}
 }
 
 function setupNotifModal(){
@@ -2974,6 +3361,7 @@ function applySettings(cfg){
   RESTAURANT.fonts = Object.assign({}, RESTAURANT.fonts, cfg.fonts || {});
   RESTAURANT.invoice = Object.assign({}, RESTAURANT.invoice, cfg.invoice || {});
   RESTAURANT.orderTypes = Object.assign({}, RESTAURANT.orderTypes, cfg.orderTypes || {});
+  RESTAURANT.watermark = Object.assign({}, RESTAURANT.watermark, cfg.watermark || {});
   // تطبيق الخطوط العامة
   applyGlobalFonts(RESTAURANT.fonts);
   // تطبيق شكل النظام (قديم/جديد)
@@ -3028,6 +3416,8 @@ function applySettings(cfg){
   WEEKLY_CFG.highlightMax= Math.min(100, Math.max(1, parseInt(RESTAURANT.weeklyHighlightMax, 10) || 20));
   // إعدادات شاشة تسجيل الدخول (خلفية/أزرار/دخول حيوي)
   try{ applyLoginScreenSettings(); refreshBioLoginBtn(); refreshBioEnrollBtn(); }catch(e){}
+  // خلفية الكاشير (شعار خفيف + نص خلف الأصناف)
+  try{ applyWatermark(RESTAURANT); }catch(e){ console.warn('تعذر تطبيق خلفية الكاشير:', e); }
   renderTicket();
 }
 
@@ -3363,7 +3753,7 @@ init();
     h+='<b>العميل:</b> '+(esc(d.name)||'—')+'<br>';
     if(d.c.askPhone) h+='<b>الجوال:</b> '+(esc(d.phone)||'—')+(d.hasWa?' ✅ واتساب':'')+'<br>';
     h+='<hr style="border:none;border-top:1px dashed #cbd5e1;margin:6px 0">';
-    d.items.forEach(function(i){ h+='<div class="cfm-prev-row"><span>'+(i.emoji||'')+' '+esc(i.name)+' ×'+i.qty+'</span><span>'+money(i.price*i.qty)+'</span></div>'; });
+    d.items.forEach(function(i,ix){ h+='<div class="cfm-prev-row"><span>'+(ix+1)+'. '+(i.emoji||'')+' '+esc(i.name)+' ×'+i.qty+'</span><span>'+money(i.price*i.qty)+'</span></div>'; });
     h+='<div class="cfm-prev-row"><span>الإجمالي الفرعي</span><span>'+money(t.subtotal)+'</span></div>';
     h+='<div class="cfm-prev-row"><span>الضريبة</span><span>'+money(t.vat)+'</span></div>';
     h+='<div class="cfm-prev-total">الإجمالي: '+money(t.total)+'</div>';
@@ -3793,7 +4183,7 @@ init();
     var h='<div class="cfm-preview">';
     h+='<div class="cfm-prev-row"><span>العميل</span><span>'+esc(s.name||'عميل')+'</span></div>';
     if(s.phone) h+='<div class="cfm-prev-row"><span>الجوال</span><span>'+esc(s.phone)+(s.hasWa?' ✅':'')+'</span></div>';
-    (s.items||[]).forEach(function(i){ h+='<div class="cfm-prev-row"><span>'+(i.emoji||'')+' '+esc(i.name)+' ×'+i.qty+'</span><span>'+money(i.price*i.qty)+'</span></div>'; });
+    (s.items||[]).forEach(function(i,ix){ h+='<div class="cfm-prev-row"><span>'+(ix+1)+'. '+(i.emoji||'')+' '+esc(i.name)+' ×'+i.qty+'</span><span>'+money(i.price*i.qty)+'</span></div>'; });
     h+='<div class="cfm-prev-row"><span>الإجمالي الفرعي</span><span>'+money(s.subtotal||0)+'</span></div>';
     h+='<div class="cfm-prev-row"><span>الضريبة</span><span>'+money(s.vat||0)+'</span></div>';
     h+='<div class="cfm-prev-total">الإجمالي: '+money(s.total||0)+'</div>';

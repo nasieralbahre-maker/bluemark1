@@ -385,50 +385,91 @@
 </div>
 
 <header class="pos-header">
+  <!-- اسم النظام أولاً في اليمين، وبعده الأزرار الخارجية: القائمة / مسح QR / الإشعارات + اسم المستخدم -->
   <div class="brand">
     <span class="logo"><img src="logo.png" alt="Sweets" style="width:40px;height:40px;object-fit:contain;background:#fff;border-radius:10px;padding:3px;display:block" /></span>
     <div>
       <h1 id="brandName">نظام الكاشير</h1>
       <small>نقطة بيع وطباعة فواتير</small>
     </div>
-    <!-- أزرار المدير بجانب الشعار (تظهر للمدير فقط) -->
-    <button class="brand-switch new-order" id="dashToCashier" style="display:none">➕ كاشير</button>
-    <button class="brand-switch to-dash" id="dashLink" style="display:none">📊 لوحة</button>
-    <button class="brand-switch qr-scan-btn" id="qrScanBtn" style="display:none">📷 مسح QR</button>
-    <button class="brand-switch upgrade-btn" id="upgradeCenterBtn" style="display:none">⬆️ ترقية</button>
-    <button class="brand-switch log-btn" id="activityLogBtn" style="display:none">📋 السجل</button>
   </div>
   <div class="head-right">
+    <button class="hdr-ico-btn hdr-menu-btn" id="hdrMenuBtn" aria-haspopup="true" aria-expanded="false" title="القائمة">☰<span>القائمة</span></button>
+    <button class="hdr-ico-btn hdr-qr-btn" id="qrScanBtn" title="مسح QR">📷<span>مسح QR</span></button>
+    <button class="hdr-ico-btn hdr-scan-btn" id="scanBtn" title="مسح الباركود بالكاميرا">📱<span>Scan</span></button>
+    <button class="hdr-ico-btn notif-btn" id="notifBtn" title="الإشعارات">🔔<span>الإشعارات</span><span class="notif-badge" id="notifBadge" style="display:none">0</span></button>
+    <span class="hdr-user-chip" id="posUserChip" style="display:none"><span id="posUserName"></span></span>
     <div class="pos-clock" id="posClock"></div>
-    <div class="pos-user" id="posUserBox" style="display:none">
-      <span class="pos-user-name" id="posUserName"></span>
-      <button class="report-link" id="posSwitchBtn">🔄 تبديل</button>
-      <button class="report-link" id="myExpensesBtn">💰 مصاريفي</button>
-      <button class="report-link pos-update-link" id="posUpdateBtn">🔄 تحديث</button>
-      <button class="report-link" id="extFormBtn">➕ استمارة <span class="acctreq-badge" id="extSubBadge" style="display:none">0</span></button>
-      <button class="bio-enroll-btn hidden" id="bioEnrollBtn">👆 بصمة</button>
-      <button class="bio-enroll-btn bio-enroll-face hidden" id="bioFaceEnrollBtn">👁️ وجه</button>
-      <button class="report-link" id="posLogoutBtn">🚪 خروج</button>
+  </div>
+
+  <!-- قائمة الخيارات: تظهر بضغط زر «القائمة» (كل الأزرار الأخرى) -->
+  <div class="hdr-backdrop" id="hdrBackdrop"></div>
+  <div class="hdr-panel" id="hdrPanel" role="menu" aria-hidden="true">
+    <div class="hdr-panel-head">
+      <span class="hdr-panel-title">القائمة</span>
+      <button class="hdr-panel-close" id="hdrPanelClose" title="إغلاق">✕</button>
     </div>
-    <button class="report-link" id="customersBtn">🧾 العملاء</button>
-    <button class="report-link notif-btn" id="notifBtn">🔔 الإشعارات <span class="notif-badge" id="notifBadge" style="display:none">0</span></button>
-    <button class="report-link" id="messagesBtn" style="position:relative">💬 الرسائل</button>
-    <button class="report-link" id="weekBtn">📅 الأسبوع</button>
-    <button class="report-link" id="tasksBtn" style="position:relative">✅ مهام <span class="notif-badge" id="tasksBadge" style="display:none">0</span></button>
-    <button class="report-link" id="dailyReportBtn">📊 التقارير</button>
-    <a href="admin.html" class="admin-link" id="adminLink">⚙️ التحكم</a>
+    <div class="hdr-grid">
+      <!-- صف أوامر المستخدم -->
+      <div class="pos-user hdr-user" id="posUserBox" style="display:none">
+        <button class="report-link" id="posSwitchBtn">🔄 تبديل</button>
+        <button class="report-link" id="myExpensesBtn">💰 مصاريفي</button>
+        <button class="report-link pos-update-link" id="posUpdateBtn">🔄 تحديث</button>
+        <button class="report-link" id="extFormBtn">➕ استمارة <span class="acctreq-badge" id="extSubBadge" style="display:none">0</span></button>
+        <button class="bio-enroll-btn hidden" id="bioEnrollBtn">👆 بصمة</button>
+        <button class="bio-enroll-btn bio-enroll-face hidden" id="bioFaceEnrollBtn">👁️ وجه</button>
+        <button class="report-link" id="posLogoutBtn">🚪 خروج</button>
+      </div>
+      <!-- أزرار المدير -->
+      <button class="brand-switch new-order acc-purple" id="dashToCashier" style="display:none">➕ كاشير</button>
+      <button class="brand-switch to-dash acc-purple" id="dashLink" style="display:none">📊 لوحة</button>
+      <button class="brand-switch acc-amber" id="backupBtn" style="display:none">💾 نسخة SQLite (.db)</button>
+      <button class="brand-switch acc-amber" id="backupJsonBtn" style="display:none">📄 نسخة JSON (.json)</button>
+      <button class="brand-switch upgrade-btn acc-amber" id="upgradeCenterBtn" style="display:none">⬆️ ترقية</button>
+      <button class="brand-switch log-btn acc-amber" id="activityLogBtn" style="display:none">📋 السجل</button>
+      <!-- أوامر التشغيل اليومية -->
+      <button class="report-link acc-blue" id="customersBtn">🧾 العملاء</button>
+      <button class="report-link acc-blue" id="messagesBtn" style="position:relative">💬 الرسائل</button>
+      <button class="report-link acc-blue" id="weekBtn">📅 الأسبوع</button>
+      <button class="report-link acc-blue" id="tasksBtn" style="position:relative">✅ مهام <span class="notif-badge" id="tasksBadge" style="display:none">0</span></button>
+      <button class="report-link acc-blue" id="dailyReportBtn">📊 التقارير</button>
+      <a href="admin.html" class="admin-link acc-rose" id="adminLink">⚙️ التحكم</a>
+    </div>
   </div>
 </header>
 
 <div class="pos">
   <!-- Catalog -->
   <main class="pos-catalog">
+    <!-- خلفية خفيفة: الشعار والنص خلف الأصناف (تُضبط من لوحة التحكم) -->
+    <div class="pos-watermark" id="posWatermark" aria-hidden="true">
+      <div class="wm-inner" id="wmInner">
+        <img class="wm-logo" id="wmLogo" src="logo.png" alt="" />
+        <!-- النصوص (الأساسي + الإضافية) تقع يسار الشعار -->
+        <div class="wm-txt-col">
+          <div class="wm-text" id="wmText">حلويات العلامة الزرقاء</div>
+          <div class="wm-texts" id="wmTexts"></div>
+        </div>
+      </div>
+    </div>
     <div class="pos-cats" id="categories"></div>
     <div class="pos-grid" id="menuGrid"></div>
   </main>
 
   <!-- Current ticket -->
   <aside class="pos-ticket">
+    <!-- وضع تعديل طلب محفوظ -->
+    <div class="edit-banner" id="editBanner" style="display:none">
+      <div class="eb-head">
+        <span class="eb-ico">✏️</span>
+        <span class="eb-txt" id="editBannerTxt">تعديل الطلب</span>
+      </div>
+      <div class="eb-actions">
+        <button type="button" class="eb-save" id="editSaveBtn">💾 حفظ التعديل</button>
+        <button type="button" class="eb-cancel" id="editCancelBtn">❌ إلغاء</button>
+      </div>
+    </div>
+
     <div class="ticket-head">
       <h2>الطلب الحالي</h2>
       <button class="ticket-new" id="clearTicket">➕ طلب جديد</button>
@@ -1221,6 +1262,7 @@
 <script src="mobile.js"></script>
 <script src="tasks.js"></script>
 <script src="expenses.js?v=1"></script>
+<script src="backup.js?v=1"></script>
 <script src="expenses-admin.js?v=1"></script>
 <script src="updater.js?v=3"></script>
 <script>

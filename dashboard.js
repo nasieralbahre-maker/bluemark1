@@ -612,6 +612,7 @@ window.Dash = (function(){
       ['العملة', s.currency||'YER'],
       ['السماح بالعربون', s.allowDeposit===false?'لا':'نعم'],
       ['تعديل الكمية مباشرة', s.qtyEdit===false?'لا':'نعم'],
+      ['تعديل السعر مباشرة', s.priceEdit===false?'لا':'نعم'],
       ['الإشعارات', s.notifEnabled===false?'لا':'نعم']
     ];
     const body = rows.map(r=>'<tr><td>'+esc(r[0])+'</td><td>'+esc(String(r[1]))+'</td></tr>').join('');

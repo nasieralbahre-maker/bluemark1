@@ -15,17 +15,19 @@ a{text-decoration:none;color:inherit}
 button{font-family:inherit}
 
 /* ===== Shared buttons ===== */
-.btn{display:inline-block;border:none;border-radius:12px;padding:13px 26px;font-weight:700;font-size:16px;cursor:pointer;transition:.2s}
-.btn-primary{background:var(--primary);color:#fff}
-.btn-primary:hover{background:var(--primary-dark)}
+.btn{display:inline-block;border:none;border-radius:14px;padding:13px 26px;font-weight:800;font-size:16px;cursor:pointer;transition:transform .15s, box-shadow .15s, filter .15s;background:var(--card);color:var(--dark);box-shadow:0 4px 14px rgba(15,23,42,.08)}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(15,23,42,.12)}
+.btn:active{transform:translateY(0) scale(.98)}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;box-shadow:0 6px 18px rgba(37,99,235,.35)}
+.btn-primary:hover{background:linear-gradient(135deg,var(--primary-dark),var(--primary));filter:brightness(1.06);box-shadow:0 10px 24px rgba(37,99,235,.45)}
 .btn-block{width:100%}
 
 /* ===== POS Header ===== */
-.pos-header{background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 22px;gap:16px}
-.pos-header .brand{display:flex;align-items:center;gap:12px}
-.pos-header .logo{font-size:30px}
-.pos-header h1{font-size:20px;font-weight:800}
-.pos-header small{font-size:12px;opacity:.85;display:block}
+.pos-header{background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:flex-start;padding:12px 22px;gap:18px}
+.pos-header .brand{display:flex;align-items:center;gap:12px;min-width:0;flex:0 1 auto}
+.pos-header .logo{font-size:30px;flex-shrink:0}
+.pos-header h1{font-size:20px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:230px}
+.pos-header small{font-size:12px;opacity:.85;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:230px}
 .pos-header .head-right{display:flex;align-items:center;gap:18px}
 .pos-clock{font-size:14px;font-weight:600;text-align:left;opacity:.95}
 .admin-link{background:rgba(255,255,255,.15);color:#fff;padding:8px 15px;border-radius:10px;font-weight:600;font-size:14px;transition:.2s}
@@ -34,32 +36,121 @@ button{font-family:inherit}
 .report-link:hover{background:rgba(255,255,255,.28)}
 .report-link.pos-update-link{background:rgba(52,199,89,.28)}
 .report-link.pos-update-link:hover{background:rgba(52,199,89,.45)}
+.admin-link{background:rgba(255,255,255,.15);color:#fff;padding:8px 15px;border-radius:10px;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit;transition:.2s;text-decoration:none}
+.admin-link:hover{background:rgba(255,255,255,.28)}
+.bio-enroll-btn{background:rgba(255,255,255,.15);color:#fff;padding:8px 15px;border-radius:10px;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit;transition:.2s}
+.bio-enroll-btn:hover{background:rgba(255,255,255,.28)}
+.brand-switch{white-space:nowrap;flex-shrink:0}
+
+/* ===== هيدر الكاشير: 3 أزرار فقط + قائمة «القائمة» الأنيقة =====
+   الشعار واسم النظام على اليمين، وثلاثة أزرار (القائمة / مسح QR / الإشعارات) على اليسار،
+   وبقية الأوامر داخل لوحة منسدلة أنيقة تُفتح بزر «☰ القائمة». */
+.pos-header{position:relative;z-index:70}
+.hdr-ico-btn{display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.16);color:#fff;
+  border:1px solid rgba(255,255,255,.20);padding:9px 13px;border-radius:12px;font-weight:700;font-size:14px;
+  cursor:pointer;font-family:inherit;transition:.18s;white-space:nowrap;flex-shrink:0}
+.hdr-ico-btn:hover{background:rgba(255,255,255,.32);transform:translateY(-1px)}
+/* زر «Scan» (ماسح الباركود) — مميّز بلون أخضر */
+.hdr-scan-btn{background:linear-gradient(135deg,#059669,#047857);border-color:rgba(255,255,255,.28);
+  box-shadow:0 4px 14px rgba(4,120,87,.30)}
+.hdr-scan-btn:hover{background:linear-gradient(135deg,#10b981,#059669)}
+.hdr-menu-btn{background:#fff;color:var(--primary-dark);border-color:#fff;font-weight:800;box-shadow:0 4px 14px rgba(2,6,23,.18)}
+.hdr-menu-btn:hover{background:#e8f0ff}
+.hdr-menu-btn.open{background:#e8f0ff}
+/* شارة اسم المستخدم — بجانب زر الإشعارات مباشرة */
+.hdr-user-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);color:#fff;
+  border:1px solid rgba(255,255,255,.20);padding:8px 13px;border-radius:12px;font-weight:700;font-size:13.5px;
+  white-space:nowrap;flex-shrink:0;max-width:230px;overflow:hidden}
+.hdr-user-chip #posUserName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* الخلفية المعتمة خلف القائمة */
+.hdr-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:1}
+.hdr-backdrop.show{opacity:1;pointer-events:auto}
+/* اللوحة المنسدلة */
+.hdr-panel{position:absolute;top:calc(100% + 10px);left:0;right:0;z-index:2;display:none;
+  background:linear-gradient(160deg,#16233c 0%,#0d1526 100%);
+  border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:14px;
+  box-shadow:0 26px 70px rgba(2,6,23,.55)}
+.hdr-panel.open{display:block;animation:hdrIn .2s ease}
+@keyframes hdrIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+.hdr-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 4px}
+.hdr-panel-title{color:#fff;font-weight:800;font-size:15px}
+.hdr-panel-close{background:rgba(255,255,255,.10);color:#fff;border:1px solid rgba(255,255,255,.16);width:32px;height:32px;
+  border-radius:10px;font-size:15px;cursor:pointer;line-height:1;font-family:inherit}
+.hdr-panel-close:hover{background:rgba(255,255,255,.24)}
+.hdr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.hdr-grid>button,.hdr-grid>a{display:flex;align-items:center;gap:9px;justify-content:flex-start;text-align:right;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);color:#e9eefb;font-weight:700;font-size:14px;
+  font-family:inherit;padding:12px 13px;border-radius:14px;cursor:pointer;transition:.18s;text-decoration:none;position:relative}
+.hdr-grid>button::before,.hdr-grid>a::before{content:'';width:9px;height:9px;border-radius:50%;background:var(--acc,#3b82f6);
+  flex:0 0 auto;box-shadow:0 0 0 3px rgba(255,255,255,.10)}
+.hdr-grid>button:hover,.hdr-grid>a:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.24);transform:translateY(-2px)}
+.acc-blue{--acc:#3b82f6}.acc-green{--acc:#22c55e}.acc-purple{--acc:#a855f7}.acc-amber{--acc:#f59e0b}.acc-rose{--acc:#f43f5e}
+/* صف المستخدم داخل القائمة */
+.hdr-user{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px 12px}
+.hdr-user .pos-user-name{background:rgba(255,255,255,.14);color:#fff}
+.hdr-user .report-link,.hdr-user .bio-enroll-btn{background:rgba(255,255,255,.12);color:#e9eefb;
+  border:1px solid rgba(255,255,255,.10);padding:8px 12px;border-radius:10px;font-size:13.5px;font-weight:700}
+.hdr-user .report-link:hover,.hdr-user .bio-enroll-btn:hover{background:rgba(255,255,255,.24)}
 
 /* ===== POS Layout ===== */
-.pos{display:grid;grid-template-columns:1fr 390px;gap:0;height:calc(100vh - 58px)}
-.pos-catalog{padding:18px 22px;overflow-y:auto}
+/* الشبكة تحتل بقية الشاشة دائماً (وضع الكاشير: لا تمرير للصفحة) */
+.pos{display:grid;grid-template-columns:1fr 390px;grid-template-rows:minmax(0,1fr);gap:0;height:calc(100vh - 58px)}
+.pos-catalog{padding:18px 22px;overflow-y:auto;position:relative;min-height:0}
+
+/* ===== خلفية الكاشير: شعار خفيف + نص خلف الأصناف ===== */
+.pos-watermark{
+  position:fixed;top:58px;left:0;right:390px;bottom:0;
+  display:none;pointer-events:none;user-select:none;z-index:0;overflow:hidden;
+}
+.pos-watermark.show{display:block}
+/* الحاوية الداخلية: موضعها وضبط هوامشها من الإعدادات (فيزيائياً: يمين/يسار) */
+.pos-watermark .wm-inner{
+  position:absolute;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;
+  gap:16px;text-align:right;max-width:90%;
+}
+/* عمود النصوص: يقع يسار الشعار (بعده في ترتيب RTL) */
+.pos-watermark .wm-txt-col{
+  display:flex;flex-direction:column;gap:6px;align-items:flex-start;max-width:520px;
+}
+.pos-watermark .wm-logo{
+  max-width:100%;height:auto;object-fit:contain;border-radius:18px;
+  filter:grayscale(.15);flex-shrink:0;
+}
+.pos-watermark .wm-text{
+  font-weight:900;letter-spacing:.5px;color:var(--primary);line-height:1.5;
+  max-width:100%;text-shadow:0 1px 0 rgba(255,255,255,.6);
+}
+.pos-watermark .wm-texts{display:flex;flex-direction:column;gap:4px;width:100%}
+.pos-watermark .wm-texts div{
+  font-weight:700;color:var(--muted);line-height:1.5;max-width:100%;
+}
 .pos-cats{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:18px;position:sticky;top:0;background:var(--bg);padding-bottom:6px;z-index:5}
 .cat-chip{background:#fff;border:1px solid var(--line);color:var(--muted);padding:9px 18px;border-radius:30px;font-weight:600;cursor:pointer;transition:.2s}
 .cat-chip:hover{border-color:var(--primary);color:var(--primary)}
 .cat-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 
-.pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
-.pos-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;cursor:pointer;transition:.15s;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;user-select:none}
-.pos-card:hover{border-color:var(--primary);transform:translateY(-3px);box-shadow:var(--shadow)}
-.pos-card:active{transform:scale(.97)}
-.pos-card .pc-emoji{font-size:40px}
-.pos-card .pc-name{font-weight:700;font-size:15px}
-.pos-card .pc-price{color:var(--primary);font-weight:800;font-size:15px}
+.pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;position:relative;z-index:1}
+.pos-card{background:linear-gradient(180deg,var(--card) 0%,var(--primary-light) 100%);border:1px solid var(--line);border-radius:18px;padding:14px;cursor:pointer;transition:transform .18s, box-shadow .18s, border-color .18s;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center;user-select:none;box-shadow:0 4px 14px rgba(15,23,42,.06);position:relative;overflow:hidden}
+.pos-card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 0%,rgba(37,99,235,.12),transparent 60%);opacity:0;transition:opacity .2s;pointer-events:none}
+.pos-card:hover{border-color:var(--primary);transform:translateY(-4px);box-shadow:0 12px 28px rgba(37,99,235,.18)}
+.pos-card:hover::before{opacity:1}
+.pos-card:active{transform:scale(.96)}
+.pos-card .pc-emoji{font-size:42px;transition:transform .2s;filter:drop-shadow(0 2px 4px rgba(0,0,0,.1))}
+.pos-card:hover .pc-emoji{transform:scale(1.12) rotate(-4deg)}
+.pos-card .pc-name{font-weight:800;font-size:15px;color:var(--dark)}
+.pos-card .pc-price{color:var(--primary);font-weight:800;font-size:15px;background:var(--primary-light);padding:3px 10px;border-radius:99px;margin-top:2px}
 .pos-empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px}
 
 /* ===== Ticket panel ===== */
-.pos-ticket{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;height:calc(100vh - 58px)}
-.ticket-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
+/* اللوحة تملأ ارتفاع الشاشة: الرأس ثابت، قائمة الأصناف تمرّر داخلياً، والتذييل (زر الدفع) ثابت */
+.pos-ticket{background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;height:auto;min-height:0}
+.ticket-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--line);flex:0 0 auto}
 .ticket-head h2{font-size:19px}
 .ticket-new{background:var(--primary-light);color:var(--primary);border:none;padding:8px 14px;border-radius:10px;font-weight:700;cursor:pointer;transition:.2s}
 .ticket-new:hover{background:#dbeafe}
 
-.ticket-cust{display:flex;flex-direction:column;gap:8px;padding:12px 18px;border-bottom:1px solid var(--line)}
+.ticket-cust{flex:0 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line)}
 .ticket-cust .type-row{display:flex;gap:8px}
 .type-btn{flex:1;border:1px solid var(--line);background:#fff;padding:8px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;transition:.2s;color:var(--muted)}
 .type-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
@@ -78,37 +169,86 @@ button{font-family:inherit}
 .theme-btn{border:1px solid var(--line);background:#fff;padding:7px 14px;border-radius:9px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;color:var(--muted);transition:.2s}
 .theme-btn.active{background:#ea580c;color:#fff;border-color:#ea580c}
 
-.ticket-scroll{flex:1;min-height:0;display:flex;flex-direction:column}
-.ticket-items{flex:1;overflow-y:auto;padding:10px 18px;display:flex;flex-direction:column;gap:8px}
+/* ===== منطقة البيانات: قائمة الأصناف هي التي تمرّر (وليست الصفحة) ===== */
+.ticket-scroll{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.ticket-items{flex:1 1 auto;min-height:90px;overflow-y:auto;padding:10px 18px;display:flex;flex-direction:column;gap:8px}
 .ticket-empty{text-align:center;color:var(--muted);margin-top:40px}
 .t-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
-.t-item .ti-emoji{font-size:26px}
+.t-item .ti-emoji{font-size:26px;position:relative}
+/* ===== جديد: الرقم التسلسلي للصنف داخل الفاتورة/الطلب ===== */
+.t-item .ti-no{
+  position:absolute;top:-6px;right:-8px;min-width:17px;height:17px;padding:0 4px;
+  border-radius:9px;background:var(--primary);color:#fff;font-style:normal;
+  font-size:10.5px;font-weight:800;line-height:17px;text-align:center;
+  box-shadow:0 1px 3px rgba(15,23,42,.28);
+}
 .t-item .ti-info{flex:1;min-width:0}
 .t-item .ti-info h4{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .t-item .ti-info span{color:var(--muted);font-size:12px}
 .t-item .ti-line{font-weight:800;color:var(--primary);font-size:14px;min-width:62px;text-align:left}
+/* ===== جديد: خلية السعر الإجمالي القابل للتحرير (بجانب مربع الكمية) ===== */
+.t-item .ti-price{display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0}
+.t-item .ti-label{font-size:10px;font-weight:700;color:var(--muted);line-height:1}
+.t-item .ti-unit{font-size:11.5px!important}
+.t-item .price-input{
+  width:54px;min-width:54px;text-align:center;font-family:'Cairo',system-ui,sans-serif;
+  font-size:15px;font-weight:800;color:#166534;line-height:1.2;
+  border:1.5px solid #bbf7d0;background:#f0fdf4;border-radius:10px;
+  padding:5px 2px;margin:0;outline:none;transition:border-color .15s,box-shadow .15s,background .15s;
+  -moz-appearance:textfield;appearance:textfield;
+}
+.t-item .price-input:focus{border-color:#16a34a;background:#fff;box-shadow:0 0 0 3px rgba(22,163,74,.18);}
+.t-item .price-input::-webkit-outer-spin-button,
+.t-item .price-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+/* السعر المعدّل يدوياً (مختلف عن سعر القائمة) */
+.t-item .price-input.edited{border-color:#f59e0b;background:#fffbeb;color:#b45309}
+.t-item .ti-price-static{font-size:12px;color:var(--muted);font-weight:700}
 .qty{display:flex;align-items:center;gap:6px}
 .qty button{width:26px;height:26px;border:1px solid var(--line);background:#fff;border-radius:7px;cursor:pointer;font-size:15px;font-weight:800;color:var(--dark)}
 .qty button:hover{border-color:var(--primary);color:var(--primary)}
 .qty span{min-width:18px;text-align:center;font-weight:700}
 .t-del{background:none;border:none;cursor:pointer;font-size:16px;color:var(--danger)}
 
-.ticket-foot{border-top:1px solid var(--line);padding:14px 18px;display:flex;flex-direction:column;gap:9px}
+.ticket-foot{border-top:1px solid var(--line);padding:12px 16px;display:flex;flex-direction:column;gap:8px;flex:0 0 auto}
+
+/* ===== وضع تعديل الطلب (شريط علوي في لوحة الفاتورة الجانبية) ===== */
+.edit-banner{
+  background:linear-gradient(135deg,#fef3c7,#fde68a);
+  border-bottom:2px solid #f59e0b;
+  padding:10px 14px;display:flex;flex-direction:column;gap:9px;
+}
+.edit-banner .eb-head{display:flex;align-items:center;gap:8px}
+.edit-banner .eb-ico{font-size:17px}
+.edit-banner .eb-txt{font-size:13.5px;font-weight:800;color:#7c2d12;line-height:1.4}
+.edit-banner .eb-actions{display:flex;gap:8px}
+.edit-banner .eb-actions button{
+  flex:1;border:none;border-radius:10px;padding:10px 8px;font-family:inherit;
+  font-weight:800;font-size:13.5px;cursor:pointer;transition:transform .15s, box-shadow .15s;
+  box-shadow:0 2px 8px rgba(180,83,9,.22);
+}
+.edit-banner .eb-actions button:active{transform:scale(.97)}
+.edit-banner .eb-save{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff}
+.edit-banner .eb-save:hover{box-shadow:0 6px 16px rgba(22,163,74,.35)}
+.edit-banner .eb-cancel{background:#fff;color:#b91c1c;border:1px solid #fecaca}
+.edit-banner .eb-cancel:hover{background:#fee2e2}
+.pay-print.edit-mode{background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 6px 18px rgba(22,163,74,.35)}
+.pay-print.edit-mode:hover{background:linear-gradient(135deg,#15803d,#166534);box-shadow:0 10px 24px rgba(22,163,74,.45)}
+
 .sum-row{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
 .sum-row.total{font-size:20px;font-weight:800;color:var(--dark);border-top:1px solid var(--line);padding-top:9px;margin-top:2px}
 .sum-row.total b{color:var(--primary)}
 .pay-row{display:flex;gap:8px}
-.pay-btn{flex:1;border:1px solid var(--line);background:#fff;padding:9px;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;transition:.2s;color:var(--muted)}
-.pay-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.pay-btn{flex:1;border:1px solid var(--line);background:#fff;padding:9px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer;transition:.2s;color:var(--muted);box-shadow:0 2px 8px rgba(15,23,42,.05)}
+.pay-btn.active{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border-color:var(--primary);box-shadow:0 4px 12px rgba(37,99,235,.3)}
 .cash-row{display:flex;gap:8px;align-items:center}
 .cash-row label{font-size:13px;color:var(--muted);white-space:nowrap}
 .cash-row input{flex:1;font-family:inherit;padding:9px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;text-align:center;background:var(--bg)}
 .cash-row input:focus{outline:none;border-color:var(--primary)}
 .change-row{display:flex;justify-content:space-between;font-weight:700;font-size:15px;color:var(--ok)}
 .remain-row{color:var(--danger)}
-.pay-print{background:var(--primary);color:#fff;border:none;border-radius:12px;padding:15px;font-weight:800;font-size:17px;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
-.pay-print:hover{background:var(--primary-dark)}
-.pay-print:disabled{opacity:.5;cursor:not-allowed}
+.pay-print{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;border-radius:14px;padding:15px;font-weight:800;font-size:17px;cursor:pointer;transition:transform .15s,box-shadow .15s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 18px rgba(37,99,235,.35)}
+.pay-print:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(37,99,235,.45)}
+.pay-print:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .wa-send-btn{margin-top:8px;width:100%;background:#25D366;color:#fff;border:none;border-radius:12px;padding:14px;font-weight:800;font-size:16px;cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
 .wa-send-btn:hover{background:#1da851}
 .wa-choose-body{display:flex;flex-direction:column;gap:12px;padding:4px 2px}
@@ -223,20 +363,48 @@ button{font-family:inherit}
 .receipt table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
 .receipt table th{text-align:right;border-bottom:1px solid #000;padding:3px 0}
 .receipt table th.c,.receipt table td.c{text-align:center;white-space:nowrap;width:22px}
-.receipt table th.l,.receipt table td.l{text-align:left;width:92px;word-break:break-all}
+.receipt table th.l,.receipt table td.l{text-align:left;width:58px;word-break:normal;white-space:nowrap}
 .receipt table td{padding:3px 0;vertical-align:top}
 .receipt table th:first-child,.receipt table td:first-child{text-align:right}
+/* ===== عمود الرقم التسلسلي في الفاتورة (عرض مقتصد + هوامش مريحة حول الرقم) ===== */
+.receipt table th.rf-no,.receipt table td.rf-no{
+  text-align:center;width:26px;min-width:26px;padding:2px 5px;
+  white-space:nowrap;font-weight:800;font-size:12px;
+}
+/* اسم الصنف: سطر واحد فقط (يُقصّ بثلاث نقاط إن طال) — لا يأخذ أكثر من سطر */
+.receipt table th.rf-item-name,.receipt table td.rf-item-name{
+  text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  word-break:normal;max-width:none;
+}
+/* بلوك بيانات الفاتورة: عمودان متجاوران لتوفير المساحة (بدل سطر لكل معلومة) */
+.receipt .r-meta-grid{display:grid;grid-template-columns:1fr 1fr;column-gap:14px;row-gap:0;text-align:right}
+.receipt .r-meta-grid>div{min-width:0}
 .receipt table td,.receipt table th{word-break:break-word;word-wrap:break-word;overflow-wrap:break-word;overflow-wrap:anywhere;white-space:normal;max-width:100%}
 .receipt .r-tot{flex-wrap:wrap}
 .receipt .r-tot span{word-break:break-all;word-wrap:break-word;overflow-wrap:anywhere;min-width:0;max-width:100%}
 .receipt .r-tot{display:flex;justify-content:space-between;font-size:12px;padding:2px 0}
 .receipt .r-tot.big{font-size:15px;font-weight:800}
+/* المبلغ المدفوع: غامق (عريض) وبنفس حجم الإجمالي — بنفس اللون (كلاهما يحمل big) */
+.receipt .r-tot.rf-paid{font-weight:800}
 .receipt .r-tot.remain{color:#000;border-top:1px dashed #000;margin-top:4px;padding-top:4px}
 .receipt .r-foot{text-align:center;font-size:11px;margin-top:10px}
 .receipt .r-user{text-align:center;font-size:11px;font-weight:700;margin-top:8px;border-top:1px dashed #999;padding-top:6px}
 .receipt .r-logo{display:block;max-width:160px;max-height:90px;margin:0 auto 6px;object-fit:contain}
 .receipt .r-tagline{font-size:11px;color:#333;margin-bottom:2px}
 .receipt .r-dev{text-align:center;font-size:10px;color:#555;margin-top:4px}
+
+/* ===== وضع الكاشير على سطح المكتب =====
+   الصفحة لا تُمرّر إطلاقاً: الشاشة مقسومة بين شبكة الأصناف (يمين) ولوحة الفاتورة (يسار)،
+   وقائمة الأصناف داخل اللوحة هي التي تمرّر، وزر «دفع وطباعة» يبقى ظاهراً دائماً في الأسفل. */
+@media(min-width:861px){
+  body:not(.dash-mode){height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+  body:not(.dash-mode)>.pos-header{flex:0 0 auto}
+  body:not(.dash-mode)>.pos{flex:1 1 auto;min-height:0}
+  /* الاسم والجوال في سطر واحد لتوفير ارتفاع قائمة الأصناف */
+  .ticket-cust{display:grid;grid-template-columns:1fr 1fr;gap:7px;align-content:start}
+  .ticket-cust .type-row,.ticket-cust .pickup-row,.ticket-cust .theme-row{grid-column:1/-1}
+  .ticket-cust #custName,.ticket-cust #custPhone{font-size:13px;padding:8px 10px}
+}
 
 /* ===== Responsive / وضع تطبيق الجوال ===== */
 /* عناصر تظهر فقط على الجوال */
@@ -273,6 +441,8 @@ button{font-family:inherit}
   .pos-card .pc-emoji{font-size:34px}
   .pos-card .pc-name{font-size:14px}
   .pos-card .pc-price{font-size:14px}
+  /* خلفية الكاشير: تملأ الشاشة خلف الأصناف */
+  .pos-watermark{top:0;left:0;right:0;bottom:0}
 
   /* ===== بطاقة الطلب ← لوحة سفلية منزلقة ===== */
   .pos-ticket{

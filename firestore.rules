@@ -1,48 +1,19 @@
-// ============================================================
-//  قواعد Firestore المطلوبة لعمل الدردشة والمكالمات بين المستخدمين
-//  انسخ هذا المحتوى إلى: Firebase Console ← Firestore Database ← Rules ← Publish
-//
-//  ⚠️ تنبيه أمني: القواعد أدناه مفتوحة بالكامل (لا تتطلب مصادقة)
-//  وتطابق الوضع الحالي للمشروع. للإنتاج الحقيقي يُنصح بشدة
-//  بتفعيل Firebase Authentication وتقييد القواعد بـ request.auth != null.
-// ============================================================
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // الإعدادات والمستخدمون والاستمارات (تحت settings/*)
-    // يشمل ذلك مستند settings/expenses (طلبات المصاريف) و settings/users.
+    // This rule allows anyone with your Firestore database reference to view, edit,
+    // and delete all data in your Firestore database. It is useful for getting
+    // started, but it is configured to expire after 30 days because it
+    // leaves your app open to attackers. At that time, all client
+    // requests to your Firestore database will be denied.
     //
-    // ===== ميزة المصاريف =====
-    // طلبات المصاريف تُخزَّن كقائمة داخل settings/expenses وفق نفس نمط النظام،
-    // لذا تُورَث القواعد أعلاه. الحماية التطبيقية مطبَّقة داخل expenses.js
-    // و expenses-admin.js عبر معاملات Firestore (DB.actExpense) ومنع التكرار:
-    //   - المستخدم يقرأ ويؤكّد استلام طلباته فقط (فحص الملكية في الكود)
-    //   - المدير فقط يعتمد الصرف / يرفض / يعيد للمراجعة
-    //   - لا يمكن اعتماد طلب المستخدم على نفسه، ولا تأكيد استلام طلب الغير
-    //   - لا تُخزَّن كلمات المرور داخل سجلات المصاريف إطلاقاً
-    // ⚠️ عند تفعيل Firebase Authentication لاحقاً: اجعل قواعد settings/*
-    //    تتحقق من request.auth != null لتعزيز هذه الحماية على مستوى الخادم.
-    match /settings/{docId} {
-      allow read, write: if true;
-    }
-
-    // الطلبات
-    match /orders/{docId} {
-      allow read, write: if true;
-    }
-
-    // رسائل الدردشة (نص / صور / صوت / سجل المكالمات)
-    match /chat_messages/{docId} {
-      allow read, write: if true;
-    }
-
-    // إشارات المكالمات (WebRTC) ومرشّحات ICE الفرعية
-    match /calls/{callId} {
-      allow read, write: if true;
-      match /{subCol}/{candId} {
-        allow read, write: if true;
-      }
+    // Make sure to write security rules for your app before that time, or else
+    // all client requests to your Firestore database will be denied until you Update
+    // your rules
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2026, 11, 6);
     }
   }
 }

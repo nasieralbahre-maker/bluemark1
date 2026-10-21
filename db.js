@@ -60,12 +60,26 @@ const DB = (function(){
     currency: 'YER',     // العملة الافتراضية: الريال اليمني
     footer:  'شكراً لزيارتكم ❤️',
     allowDeposit: true,   // السماح بالعربون / الدفع الجزئي
+    priceEdit: true,      // تعديل سعر الوحدة مباشرة بجانب الكمية في الكاشير
     directPrint: false,   // طباعة مباشرة دون تأكيد
     notifEnabled: true,   // تفعيل إشعارات النظام عند وصول طلب جديد
     notifSound: true,     // تشغيل نغمة تنبيه مع الإشعار
     qrEnabled: true,      // كود QR في الفاتورة + زر القراءة في الكاشير
     // ----- إظهار/إخفاء أزرار نوع الطلب في الكاشير (محلي/سفري/توصيل) -----
     orderTypes: { local: true, takeaway: true, delivery: true },
+    // ----- خلفية الكاشير: شعار خفيف + نص خلف الأصناف -----
+    watermark: {
+      enabled: true,       // إظهار الخلفية في شاشة الكاشير
+      logo: '',            // شعار مخصص للخلفية (dataURL) — فارغ = شعار الفاتورة ثم logo.png
+      opacity: 12,         // درجة إظهار الشعار (نسبة مئوية 2–60)
+      size: 140,           // حجم الشعار (px)
+      text: 'حلويات العلامة الزرقاء', // النص تحت الشعار
+      texts: [],           // نصوص إضافية تُعرض أسفل الشعار
+      alignX: 'center',    // الموضع الأفقي: center | left | right
+      alignY: 'center',    // الموضع العمودي: center | top | bottom
+      marginX: 0,          // الهامش الأفقي من الحافة (px)
+      marginY: 0           // الهامش العمودي من الحافة (px)
+    },
     // ----- أزرار/أيقونات الواجهة: إظهار/إخفاء + حجم الأيقونة (عام ولكل زر) -----
     ui: {
       iconScale: 100,   // حجم الأيقونات العام (نسبة مئوية 70–160)
@@ -204,6 +218,20 @@ const DB = (function(){
     out.fonts = Object.assign({}, DEFAULT_SETTINGS.fonts, (s && s.fonts) || {});
     out.invoice = Object.assign({}, DEFAULT_SETTINGS.invoice, (s && s.invoice) || {});
     out.orderTypes = Object.assign({}, DEFAULT_SETTINGS.orderTypes, (s && s.orderTypes) || {});
+    // ----- خلفية الكاشير (شعار + نص) -----
+    var wmIn = (s && s.watermark) || {};
+    out.watermark = {
+      enabled: (wmIn.enabled !== false),
+      logo: (wmIn.logo || ''),
+      opacity: (wmIn.opacity != null ? Math.min(60, Math.max(2, Number(wmIn.opacity) || DEFAULT_SETTINGS.watermark.opacity)) : DEFAULT_SETTINGS.watermark.opacity),
+      size: (wmIn.size != null ? Math.min(400, Math.max(40, Number(wmIn.size) || DEFAULT_SETTINGS.watermark.size)) : DEFAULT_SETTINGS.watermark.size),
+      text: (wmIn.text != null ? String(wmIn.text) : DEFAULT_SETTINGS.watermark.text),
+      texts: (Array.isArray(wmIn.texts) ? wmIn.texts.map(function(t){ return String(t == null ? '' : t).trim(); }).filter(Boolean).slice(0, 10) : []),
+      alignX: (['left','right','center'].indexOf(String(wmIn.alignX || '')) !== -1 ? String(wmIn.alignX) : DEFAULT_SETTINGS.watermark.alignX),
+      alignY: (['top','bottom','center'].indexOf(String(wmIn.alignY || '')) !== -1 ? String(wmIn.alignY) : DEFAULT_SETTINGS.watermark.alignY),
+      marginX: (wmIn.marginX != null ? Math.min(400, Math.max(0, Number(wmIn.marginX) || 0)) : DEFAULT_SETTINGS.watermark.marginX),
+      marginY: (wmIn.marginY != null ? Math.min(400, Math.max(0, Number(wmIn.marginY) || 0)) : DEFAULT_SETTINGS.watermark.marginY)
+    };
     out.loginScreen = Object.assign({}, DEFAULT_SETTINGS.loginScreen, (s && s.loginScreen) || {});
     // دمج إعدادات الواجهة (ui) بعمق مع ضمان وجود كل الأزرار
     const uiIn = (s && s.ui) || {};
@@ -1000,6 +1028,59 @@ const DB = (function(){
     return removed;
   }
 
+  // ===== مسح الباركود من الجوال → الكمبيوتر (ترحيل عبر Firestore) =====
+  // يعمل على نفس الشبكة أو عبر الإنترنت: الجوال يكتب كود المسح، والكمبيوتر يستقبله فوراً.
+  function lsScans(){ try{ return JSON.parse(localStorage.getItem('scans')||'[]'); }catch(e){ return []; } }
+  function addScan(code, meta){
+    const c = String(code||'').trim();
+    if(!c) return Promise.reject(new Error('كود فارغ'));
+    const payload = { code:c, ts:Date.now(), device:(meta&&meta.device)||'', by:(meta&&meta.by)||'' };
+    if(useFB()){
+      const ref = window.fbdb.collection('scans').doc(payload.ts + '-' + Math.random().toString(36).slice(2,8));
+      return ref.set(payload);
+    }
+    const list = lsScans();
+    list.push(payload);
+    localStorage.setItem('scans', JSON.stringify(list.slice(-50)));
+    return Promise.resolve(payload);
+  }
+  function onScans(cb){
+    if(useFB()){
+      const q = window.fbdb.collection('scans').orderBy('ts','desc').limit(30);
+      return q.onSnapshot(
+        snap => { cb(snap.docs.map(d => Object.assign({ id:d.id }, d.data()))); },
+        err => { console.error('تعذّر الاستماع للمسحات:', err); }
+      );
+    }
+    // بدون سحابة: استطلاع للتخزين المحلي (للتجربة على نفس الجهاز)
+    let lastKey = '';
+    const iv = setInterval(() => {
+      const list = lsScans();
+      const key = list.length ? String(list[list.length-1].ts) : '';
+      if(key !== lastKey){
+        lastKey = key;
+        cb(list.map(s => Object.assign({ id: String(s.ts) }, s)));
+      }
+    }, 1200);
+    return () => clearInterval(iv);
+  }
+  function deleteScan(id){
+    if(!id) return Promise.resolve();
+    if(useFB()) return window.fbdb.collection('scans').doc(id).delete().catch(()=>{});
+    const list = lsScans().filter(s => String(s.ts) !== String(id));
+    localStorage.setItem('scans', JSON.stringify(list));
+    return Promise.resolve();
+  }
+  function clearScans(){
+    if(useFB()){
+      return window.fbdb.collection('scans').get()
+        .then(s => Promise.all(s.docs.map(d => d.ref.delete())))
+        .catch(()=>{});
+    }
+    localStorage.removeItem('scans');
+    return Promise.resolve();
+  }
+
   return {
     isCloud: useFB,
     fb: () => (useFB() ? window.fbdb : null),
@@ -1019,7 +1100,9 @@ const DB = (function(){
     getExpenses, addExpense, actExpense, onExpenses, expLog,
     EXP_STATUS_LABEL, EXP_CURRENCIES, fmtExpMoney, expDateStr, expTimeStr,
     // ===== الدردشة والمكالمات =====
-    getChatMessages, addChatMessage, onChatMessages, clearChat, purgeChatBefore
+    getChatMessages, addChatMessage, onChatMessages, clearChat, purgeChatBefore,
+    // ===== مسح الباركود من الجوال =====
+    addScan, onScans, deleteScan, clearScans
   };
 })();
 

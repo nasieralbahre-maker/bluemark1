@@ -230,8 +230,15 @@ body.admin-dark .settings-secnav{background:#0b1424;}
 body.admin-dark .settings-secnav .sec-chip{background:#0e1a2f;color:#cbd5e1;border-color:#1e2d47;}
 .settings-form>.settings-card:last-child .btn-primary,
 #settingsForm>.btn-primary{grid-column:1/-1;}
-#settingsForm{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px;align-items:start;}
-#settingsForm>.btn-primary{justify-self:start;}
+#settingsForm{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px;align-items:start;padding-bottom:96px;}
+/* ===== شريط حفظ الإعدادات: ثابت أسفل يسار الشاشة (لا يختفي عند التمرير) ===== */
+#settingsSaveBar{position:fixed;left:16px;bottom:16px;z-index:950;display:none;}
+#settingsSaveBar.show{display:block;}
+#settingsSaveBar .btn-primary{border-radius:14px;box-shadow:0 16px 36px -12px rgba(37,99,235,.8),var(--shadow-sm);}
+@media(max-width:520px){
+  #settingsSaveBar{left:12px;bottom:12px;}
+  #settingsSaveBar .btn-primary{padding:12px 16px;font-size:14px;}
+}
 
 .check-row{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;color:#334155;margin-bottom:11px;cursor:pointer;}
 .check-row input[type=checkbox]{width:19px;height:19px;accent-color:var(--brand);cursor:pointer;flex:none;}
@@ -342,6 +349,7 @@ body.admin-dark .settings-secnav .sec-chip{background:#0e1a2f;color:#cbd5e1;bord
 /* ===== خلايا جداول الأصناف والمستخدمين ===== */
 .emoji-cell{font-size:20px;text-align:center;}
 .price-input{width:92px;padding:7px 9px;}
+.bc-input{width:130px;padding:7px 9px;font-size:13px;direction:ltr;text-align:left;}
 .avail-toggle{width:19px;height:19px;accent-color:var(--ok);cursor:pointer;}
 .wrap-cell{text-align:center;}
 .role-badge{font-size:12px;font-weight:800;padding:4px 11px;border-radius:999px;background:#e0e7ff;color:#3730a3;white-space:nowrap;}
@@ -549,7 +557,6 @@ body.admin-dark .settings-subhead{color:var(--ink);}
       <div class="login-field"><span class="lf-ico">👤</span><input type="text" id="usr" placeholder="اسم المستخدم" autocomplete="username" /></div>
       <div class="login-field"><span class="lf-ico">🔒</span><input type="password" id="pwd" placeholder="كلمة المرور" autocomplete="current-password" /></div>
       <button type="submit" class="btn btn-primary btn-block">دخول</button>
-      <small class="hint">الحساب الافتراضي: <b>admin</b> / كلمة المرور <b>admin</b></small>
       <small class="err" id="loginErr"></small>
     </form>
   </div>
@@ -565,11 +572,13 @@ body.admin-dark .settings-subhead{color:var(--ink);}
       <button class="side-link" data-tab="menu">🍴 الأصناف والأسعار</button>
       <button class="side-link" data-tab="stats">📊 الإحصائيات</button>
       <button class="side-link" data-tab="settings">⚙️ الإعدادات</button>
+      <button class="side-link" data-tab="accounts">🔐 إدارة الحسابات</button>
       <button class="side-link" data-tab="users">👥 المستخدمون</button>
       <button class="side-link" data-tab="signups">🆕 طلبات الحساب <span class="side-badge" id="signupBadge" style="display:none">0</span></button>
       <button class="side-link" data-tab="expenses">💰 إدارة المصاريف <span class="side-badge" id="expBadge" style="display:none">0</span></button>
       <button class="side-link" data-tab="expreports">📊 تقارير المصاريف</button>
       <button class="side-link" data-tab="printer">🖨️ إعدادات الطابعة</button>
+      <button class="side-link" data-tab="backup">💾 النسخ الاحتياطي</button>
     </nav>
     <div class="side-foot">
       <a href="dashboard.html" class="side-link">📊 لوحة المعلومات</a>
@@ -625,10 +634,14 @@ body.admin-dark .settings-subhead{color:var(--ink);}
         <table class="data-table" id="menuTable">
           <thead><tr>
             <th>الرمز</th><th>الاسم</th><th>التصنيف</th>
-            <th>السعر (ر.س)</th><th>مغلّف</th><th>متاح</th><th>إجراءات</th>
+            <th>السعر (ر.س)</th><th>الباركود</th><th>مغلّف</th><th>متاح</th><th>إجراءات</th>
           </tr></thead>
           <tbody id="menuBody"></tbody>
         </table>
+      </div>
+      <div class="hint-box" style="margin-top:12px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;border-radius:12px;padding:11px 13px;font-size:13px;font-weight:700;line-height:1.9">
+        📷 <b>المسح من الجوال:</b> افتح <code id="scanUrlHint">scan.html</code> على الجوال (نفس الرابط، بأي جهاز على نفس الشبكة)، سجّل الدخول بحساب الكاشير، وامسح الباركود بكاميرا الجوال — سيظهر الصنف مباشرة في كمبيوتر المحل ويضاف للطلب الحالي.<br/>
+        ضع رقم الباركود في عمود «الباركود» لكل صنف ليُضاف تلقائياً عند المسح.
       </div>
     </section>
 
@@ -687,10 +700,55 @@ body.admin-dark .settings-subhead{color:var(--ink);}
         </div>
 
         <div class="settings-card">
-          <h3>خيارات الدفع والطباعة</h3>
+          <h3>🌫️ خلفية الكاشير (الشعار والنص)</h3>
+          <div class="toggle-row">
+            <label class="switch"><input type="checkbox" id="setWmEnabled" /><span class="slider"></span></label>
+            <span class="toggle-txt">إظهار الشعار والنص خلف أصناف الكاشير</span>
+          </div>
+          <label>النص تحت الشعار<input type="text" id="setWmText" maxlength="60" placeholder="حلويات العلامة الزرقاء" /></label>
+          <div class="form-row">
+            <label>درجة إظهار الشعار (%)<input type="number" id="setWmOpacity" min="2" max="60" step="1" /></label>
+            <label>حجم الشعار (px)<input type="number" id="setWmSize" min="40" max="400" step="10" /></label>
+          </div>
+          <div class="form-row">
+            <label>موضع الشعار أفقياً
+              <select id="setWmAlignX">
+                <option value="center">وسط</option>
+                <option value="left">يسار</option>
+                <option value="right">يمين</option>
+              </select>
+            </label>
+            <label>موضع الشعار عمودياً
+              <select id="setWmAlignY">
+                <option value="center">وسط</option>
+                <option value="top">أعلى</option>
+                <option value="bottom">أسفل</option>
+              </select>
+            </label>
+          </div>
+          <div class="form-row">
+            <label>الهامش الأفقي من الحافة (px)<input type="number" id="setWmMarginX" min="0" max="400" step="10" /></label>
+            <label>الهامش العمودي من الحافة (px)<input type="number" id="setWmMarginY" min="0" max="400" step="10" /></label>
+          </div>
+          <label>شعار الخلفية (صورة) — اختياري
+            <input type="file" id="setWmLogoFile" accept="image/*" />
+          </label>
+          <div class="logo-preview-row">
+            <img id="wmLogoPreview" class="logo-preview" style="display:none" alt="" />
+            <button type="button" class="btn" id="removeWmLogoBtn" style="display:none">🗑️ إزالة شعار الخلفية</button>
+          </div>
+          <label>نصوص إضافية أسفل الشعار</label>
+          <div id="wmTextsList"></div>
+          <button type="button" class="btn" id="addWmTextBtn">➕ إضافة نص</button>
+          <small class="settings-hint">يظهر الشعار بشكل خفيف جداً خلف الأصناف في شاشة الكاشير (لا يغطيها ولا يمنع الضغط عليها). الشعار الافتراضي هو شعار الفاتورة، ويمكنك رفع شعار خاص للخلفية. النص تحت الشعار قابل للتعديل، ويمكنك إضافة عدة نصوص إضافية تظهر تحته. من «موضع الشعار» يمكنك وضعه يميناً أو يساراً أو في الوسط، وضبط الهوامش عن الحواف.</small>
+        </div>
+
+        <div class="settings-card">
+          <h3>🛒 خيارات الدفع والطباعة</h3>
           <label class="check-row"><input type="checkbox" id="setAllowDeposit" /> السماح بالعربون (الدفع الجزئي) وبقاء المتبقي على الفاتورة</label>
           <label class="check-row"><input type="checkbox" id="setDirectPrint" /> طباعة مباشرة عند الضغط على دفع وطباعة (دون خطوة تأكيد)</label>
           <label class="check-row"><input type="checkbox" id="setQtyEdit" /> تعديل الكمية بالضغط المباشر على الرقم في الكاشير (كتابة الكمية مباشرة)</label>
+          <label class="check-row"><input type="checkbox" id="setPriceEdit" /> تعديل السعر مباشرة بجانب مربع الكمية في الكاشير — الرقم المكتوب هو «إجمالي سعر الصنف لكل الكمية» (ويظهر سعر الوحدة تحت اسم الصنف)</label>
           <small class="settings-hint">للطباعة الصامتة تماماً (دون نافذة المتصفح) شغّل المتصفح بوضع الكشك (Kiosk Printing)؛ غير ذلك تظهر نافذة الطباعة تلقائياً.</small>
         </div>
 
@@ -975,7 +1033,7 @@ body.admin-dark .settings-subhead{color:var(--ink);}
           <small class="settings-hint">عند التعطيل يختفي زر «إشعارات الرسائل» والمكالمات. المكالمات تتطلب اتصالاً سحابياً.</small>
         </div>
 
-        <button type="submit" class="btn btn-primary">💾 حفظ الإعدادات</button>
+        <!-- زر الحفظ الثابت أسفل يسار الشاشة (خارج النموذج ليبقى ظاهراً أثناء التمرير) -->
       </form>
 
       <!-- بطاقات تعمل بشكل مستقل عن نموذج الحفظ الأساسي -->
@@ -1074,6 +1132,52 @@ body.admin-dark .settings-subhead{color:var(--ink);}
           </div>
           <small class="settings-hint">مثال: بضبط اليوم «الجمعة» والاحتفاظ «7 أيام»، تُنظّف الرسائل الأقدم من أسبوع تلقائياً كل جمعة عند فتح لوحة التحكم. «تنظيف الآن» يحذف كل الرسائل فوراً.</small>
         </div>
+      </div>
+    </section>
+
+    <!-- ===== شريط حفظ الإعدادات: ثابت أسفل يسار الشاشة ===== -->
+    <div id="settingsSaveBar">
+      <button type="submit" form="settingsForm" class="btn btn-primary">💾 حفظ الإعدادات</button>
+    </div>
+
+    <!-- ===== إدارة الحسابات (إعدادات اللوحة + تغيير كلمة المرور) ===== -->
+    <section class="tab" id="tab-accounts">
+      <div class="tab-head">
+        <h2>🔐 إدارة الحسابات</h2>
+      </div>
+
+      <!-- 1) إعدادات لوحة التحكم -->
+      <div class="settings-card">
+        <h3>⚙️ إعدادات لوحة التحكم</h3>
+        <div id="accInfo" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+        <div class="toggle-row">
+          <label class="switch"><input type="checkbox" id="accDark" /><span class="slider"></span></label>
+          <span class="toggle-txt">🌙 الوضع الليلي للوحة التحكم (ألوان داكنة مريحة للعين)</span>
+        </div>
+        <div class="toggle-row">
+          <label class="switch"><input type="checkbox" id="accHideMoney" /><span class="slider"></span></label>
+          <span class="toggle-txt">🙈 إخفاء المبالغ المالية في لوحة التحكم</span>
+        </div>
+        <button type="button" class="btn primary" id="accSettingsSave" style="margin-top:8px">💾 حفظ إعدادات لوحة التحكم</button>
+        <small class="settings-hint">هذه الإعدادات تخص حسابك الحالي على لوحة التحكم فقط.</small>
+      </div>
+
+      <!-- 2) تغيير كلمة المرور -->
+      <div class="settings-card accent-rose">
+        <h3>🔑 تغيير كلمة المرور للوحة التحكم</h3>
+        <form id="accPassForm" autocomplete="off">
+          <label>كلمة المرور الحالية
+            <input type="password" id="accPassCurrent" maxlength="40" autocomplete="current-password" required />
+          </label>
+          <label>كلمة المرور الجديدة
+            <input type="password" id="accPassNew" maxlength="40" autocomplete="new-password" required />
+          </label>
+          <label>تأكيد كلمة المرور الجديدة
+            <input type="password" id="accPassConfirm" maxlength="40" autocomplete="new-password" required />
+          </label>
+          <small class="settings-hint" style="display:block;margin-bottom:10px">كلمة المرور يجب ألا تقل عن 4 أحرف. تُحدَّث كلمة المرور لهذا الحساب ويُطبَّق التغيير فوراً عند الدخول التالي للوحة التحكم والكاشير.</small>
+          <button type="submit" class="btn primary">🔒 تغيير كلمة المرور</button>
+        </form>
       </div>
     </section>
 
@@ -1247,9 +1351,16 @@ body.admin-dark .settings-subhead{color:var(--ink);}
         <div class="printer-cfg" style="flex:1;min-width:0">
           <div class="settings-card">
             <h3>قياس الورق والهوامش</h3>
+            <label>حجم الورق
+              <select id="pPaperSize">
+                <option value="thermal">حراري (حسب العرض أدناه)</option>
+                <option value="A4">A4 (210 مم)</option>
+              </select>
+            </label>
             <label>عرض الورق
               <select id="pPaper">
                 <option value="80">80 مم (الأشيع)</option>
+              <option value="210">A4 (210 مم)</option>
                 <option value="58">58 مم</option>
                 <option value="72">72 مم</option>
                 <option value="60">60 مم</option>
@@ -1449,6 +1560,66 @@ body.admin-dark .settings-subhead{color:var(--ink);}
         </div>
       </div>
     </section>
+
+    <!-- ===== النسخ الاحتياطي (أسفل إعدادات الطابعة) ===== -->
+    <section class="tab" id="tab-backup">
+      <div class="tab-head"><h2>💾 النسخ الاحتياطي (SQLite)</h2></div>
+      <small class="settings-hint" style="display:block;margin-bottom:14px">نسخ احتياطي بصيغة SQLite (.db) لجميع بيانات النظام. يُحفظ محلياً على هذا الجهاز.</small>
+      <div class="settings-card">
+        <h3>نسخ احتياطي فوري</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button type="button" class="btn primary" id="backupManualBtn">💾 نسخة SQLite (.db)</button>
+          <button type="button" class="btn" id="backupJsonBtn">📄 نسخة JSON (.json)</button>
+          <button type="button" class="btn" id="backupRestoreBtn">📂 استعادة من ملف .db</button>
+          <input type="file" id="backupRestoreInput" accept=".db,.sqlite,.sqlite3,.json" style="display:none" />
+        </div>
+        <small class="settings-hint" style="margin-top:8px;display:block">قبل الاستعادة، يُنشأ نسخة أمان تلقائياً.</small>
+      </div>
+      <div class="settings-card">
+        <h3>مسار حفظ النسخ</h3>
+        <label>موقع حفظ ملف .db
+          <select id="backupSavePath">
+            <option value="default">مجلد Downloads (افتراضي)</option>
+            <option value="choose">اختيار موقع (Chrome/Edge)</option>
+          </select>
+        </label>
+        <small class="settings-hint" style="margin-top:6px;display:block">«اختيار موقع» يفتح نافذة حفظ (File System Access API) لاختيار المجلد. «مجلد Downloads» ينزّل إلى مجلد التنزيلات الافتراضي.</small>
+        <small class="settings-hint" style="margin-top:4px;display:block">للنسخ التلقائي (خادم): عيّن متغير البيئة <code>BMS_BACKUP_DIR</code> في خدمة backup-service.</small>
+      </div>
+      <div class="settings-card">
+        <h3>جدولة النسخ التلقائي</h3>
+        <label class="check-row"><input type="checkbox" id="backupScheduleEnabled" /> تفعيل النسخ التلقائي</label>
+        <div class="form-row">
+          <label>التكرار
+            <select id="backupScheduleInterval">
+              <option value="daily">يومي</option>
+              <option value="weekly">أسبوعي</option>
+              <option value="monthly">شهري</option>
+            </select>
+          </label>
+          <label>الوقت <input type="time" id="backupScheduleTime" value="02:00" /></label>
+        </div>
+        <div class="form-row" id="backupWeekDayWrap">
+          <label>يوم الأسبوع (للأسبوعي)
+            <select id="backupScheduleWeekDay">
+              <option value="0">الأحد</option><option value="1">الاثنين</option><option value="2">الثلاثاء</option>
+              <option value="3">الأربعاء</option><option value="4">الخميس</option><option value="5">الجمعة</option>
+              <option value="6">السبت</option>
+            </select>
+          </label>
+          <label>يوم الشهر (للشهري) <input type="number" id="backupScheduleMonthDay" min="1" max="28" value="1" /></label>
+        </div>
+        <button type="button" class="btn primary" id="backupScheduleSave" style="margin-top:8px">💾 حفظ الجدولة</button>
+        <div style="margin-top:10px;font-size:13px;color:#475569">
+          <div>النسخة القادمة: <b id="backupNextDate">—</b></div>
+          <div>آخر نسخة ناجحة: <b id="backupLastDate">—</b></div>
+        </div>
+      </div>
+      <div class="settings-card">
+        <h3>سجل النسخ الاحتياطي</h3>
+        <div id="backupHistory" style="max-height:240px;overflow:auto"></div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -1469,6 +1640,7 @@ body.admin-dark .settings-subhead{color:var(--ink);}
         <label>السعر<input type="number" id="itemPrice" required min="0" step="0.5" /></label>
         <label>الرمز (إيموجي)<input type="text" id="itemEmoji" maxlength="4" placeholder="🍕" /></label>
       </div>
+      <label>الباركود (للمسح من الجوال)<input type="text" id="itemBarcode" maxlength="40" placeholder="امسح الباركود أو اكتب رقمه" /></label>
       <label class="check-row"><input type="checkbox" id="itemAvail" checked /> متاح للطلب</label>
       <label class="check-row"><input type="checkbox" id="itemWrapped" /> 🎁 صنف مغلّف (يدعم الثيم)</label>
       <button type="submit" class="btn btn-primary btn-block">حفظ</button>
@@ -1605,6 +1777,7 @@ body.admin-dark .settings-subhead{color:var(--ink);}
 <script src="printer.js"></script>
 <script src="admin.js"></script>
 <script src="expenses-admin.js?v=1"></script>
+<script src="backup.js?v=1"></script>
 <script>
 /* توسيع / طي القائمة الزرقاء على الجوال */
 (function(){
